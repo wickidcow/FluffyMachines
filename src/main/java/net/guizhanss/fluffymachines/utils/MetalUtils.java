@@ -1,12 +1,13 @@
 package net.guizhanss.fluffymachines.utils;
 
-import lombok.experimental.UtilityClass;
 import net.guizhanss.guizhanlib.common.utils.StringUtil;
 
 import java.util.Locale;
 
-@UtilityClass
 public final class MetalUtils {
+
+    private MetalUtils() {
+    }
 
     public static String getMetalName(String type) {
         return switch (type.toUpperCase(Locale.ROOT)) {

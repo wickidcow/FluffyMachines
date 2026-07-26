@@ -24,7 +24,6 @@ import java.util.logging.Level;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import lombok.SneakyThrows;
 import net.guizhanss.minecraft.guizhanlib.updater.GuizhanUpdater;
 import net.guizhanss.slimefun4.utils.WikiUtils;
 import org.bstats.bukkit.Metrics;
@@ -51,10 +50,19 @@ public class FluffyMachines extends JavaPlugin implements SlimefunAddon {
     public static final HashMap<ItemStack, List<Pair<ItemStack, List<RecipeChoice>>>> shapelessVanillaRecipes =
         new HashMap<>();
 
-    @SneakyThrows
     @Override
     public void onEnable() {
         instance = this;
+
+        try {
+            enablePlugin();
+        } catch (Exception ex) {
+            getLogger().log(Level.SEVERE, "FluffyMachines could not finish enabling.", ex);
+            getServer().getPluginManager().disablePlugin(this);
+        }
+    }
+
+    private void enablePlugin() throws Exception {
         // Read something from your config.yml
         Config cfg = new Config(this);
 

@@ -14,6 +14,7 @@ import io.github.thebusybiscuit.slimefun4.api.items.SlimefunItemStack;
 import io.github.thebusybiscuit.slimefun4.libraries.dough.protection.Interaction;
 import org.bukkit.Bukkit;
 import org.bukkit.Effect;
+import org.bukkit.ExplosionResult;
 import org.bukkit.Material;
 import org.bukkit.Sound;
 import org.bukkit.block.Block;
@@ -80,7 +81,13 @@ class UpgradedExplosiveTool extends ExplosiveTool {
         List<Block> blocksToDestroy = new ArrayList<>();
 
         if (callExplosionEvent.getValue()) {
-            BlockExplodeEvent blockExplodeEvent = new BlockExplodeEvent(b, blocks, 0);
+            BlockExplodeEvent blockExplodeEvent = new BlockExplodeEvent(
+                b,
+                b.getState(),
+                blocks,
+                0.0F,
+                ExplosionResult.DESTROY
+            );
             Bukkit.getServer().getPluginManager().callEvent(blockExplodeEvent);
 
             if (!blockExplodeEvent.isCancelled()) {
@@ -158,9 +165,7 @@ class UpgradedExplosiveTool extends ExplosiveTool {
 
     private void breakBlock(Player p, ItemStack item, Block b, List<ItemStack> drops) {
         Slimefun.getProtectionManager().logAction(p, b, Interaction.BREAK_BLOCK);
-        Material material = b.getType();
-
-        b.getWorld().playEffect(b.getLocation(), Effect.STEP_SOUND, material);
+        b.getWorld().playEffect(b.getLocation(), Effect.DESTROY_BLOCK, b.getBlockData());
         SlimefunItem sfItem = StorageCacheUtils.getSfItem(b.getLocation());
 
         // Don't break SF blocks

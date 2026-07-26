@@ -7,9 +7,6 @@ import io.github.thebusybiscuit.slimefun4.implementation.items.SimpleSlimefunIte
 import io.github.thebusybiscuit.slimefun4.libraries.dough.common.ChatColors;
 import io.ncbpfluffybear.fluffymachines.FluffyMachines;
 import io.ncbpfluffybear.fluffymachines.utils.Utils;
-import lombok.AccessLevel;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
 import io.github.thebusybiscuit.slimefun4.api.recipes.RecipeType;
 import io.github.thebusybiscuit.slimefun4.api.items.ItemGroup;
 import io.github.thebusybiscuit.slimefun4.api.items.SlimefunItem;
@@ -202,8 +199,6 @@ public class PortableCharger extends SimpleSlimefunItem<ItemUseHandler> implemen
         return false;
     }
 
-    @Getter
-    @AllArgsConstructor(access = AccessLevel.PRIVATE)
     public enum Type {
 
         SMALL(128, 8),
@@ -214,6 +209,11 @@ public class PortableCharger extends SimpleSlimefunItem<ItemUseHandler> implemen
 
         public final int chargeCapacity;
         public final int chargeSpeed;
+
+        Type(int chargeCapacity, int chargeSpeed) {
+            this.chargeCapacity = chargeCapacity;
+            this.chargeSpeed = chargeSpeed;
+        }
 
     }
 }

@@ -47,3 +47,14 @@ The old Dolly could touch Bukkit block states from an asynchronous backpack call
 - Confirmed output capacity before Backpack Unloader source deletion.
 - Added null-safe handling for old or damaged item lore in recipe keys, Warp Pad Configurators, Watering Cans, and Smart Factory recipe displays.
 - Set `api-version: '26.2'` so older servers refuse to load this compatibility build.
+
+## 26.2.2 compilation compatibility follow-up
+
+- Removed Lombok entirely so Java 25 compilation does not depend on implicit annotation processing.
+- Added an explicit constructor to `PortableCharger.Type`.
+- Updated `BlockExplodeEvent` to include the captured block state and `ExplosionResult.DESTROY`.
+- Migrated `WATER_SPLASH` to `SPLASH`, `VILLAGER_HAPPY` to `HAPPY_VILLAGER`, and `REDSTONE` to `DUST`.
+- Migrated `PotionEffectType.SLOW` to `SLOWNESS`.
+- Replaced removal-pending `Effect.STEP_SOUND` with `Effect.DESTROY_BLOCK` and block data.
+- Restored missing `Utils` imports in the Backpack Loader and Unloader.
+- Updated GitHub Actions to Node 24-based action releases and refreshed Maven compiler/shade plugins.

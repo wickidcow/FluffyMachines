@@ -1,34 +1,46 @@
-# 26.2.1 Compilation Fix
+# 26.2 Compilation Fix History
 
-## Reported failure
+## 26.2.1 — Slimefun-relocated Dough API
 
-The 26.2.0 maintenance source reached Maven compilation but could not resolve `Pair`, `CustomItemStack`, and `Interaction`.
-
-## Cause
-
-The addon had been changed to import the standalone Dough namespace:
-
-`io.github.bakedlibs.dough`
+The first GitHub Actions run reached Java compilation but could not resolve `Pair`, `CustomItemStack`, and `Interaction` because the addon had been changed to use the standalone Dough namespace.
 
 The target Slimefun Legacy/Gugu core shades Dough into:
 
 `io.github.thebusybiscuit.slimefun4.libraries.dough`
 
-This distinction is required for more than class discovery. Slimefun API methods such as protection checks use the relocated `Interaction` type in their method signatures, so a standalone Dough enum would not be type-compatible even if another Dough dependency were added.
+Version 26.2.1 restored all 46 affected imports and added a CI guard against direct `io.github.bakedlibs.dough` imports.
 
-## Correction
+## 26.2.2 — Paper 26.2 and Java 25 API cleanup
 
-- Restored all 46 Dough imports to the Slimefun-relocated namespace.
-- Restored `Pair`, `CustomItemStack`, `Interaction`, `Config`, `ChatColors`, `BlockPosition`, `Vein`, and `PersistentDataAPI` to the target core's exposed package.
-- Added a GitHub Actions guard that fails immediately if a direct `io.github.bakedlibs.dough` import is reintroduced.
-- Bumped the maintenance version to `26.2.1-legacy-english`.
+The second GitHub Actions run passed dependency resolution and the relocated Dough checks. Compilation then exposed the remaining modern API incompatibilities:
 
-## Verification performed here
+- Java 25 no longer implicitly runs Lombok annotation processing, so the Portable Charger enum had no generated constructor.
+- `BlockExplodeEvent` now requires the exploded `BlockState` and an `ExplosionResult`.
+- `Particle.WATER_SPLASH`, `Particle.VILLAGER_HAPPY`, and `Particle.REDSTONE` were replaced by `SPLASH`, `HAPPY_VILLAGER`, and `DUST`.
+- `PotionEffectType.SLOW` was replaced by `SLOWNESS`.
+- `Effect.STEP_SOUND` is removal-pending in Paper 26.2 and was replaced by `DESTROY_BLOCK` with `BlockData`.
+- Backpack Loader and Unloader were missing their local `Utils` imports after the main-thread persistence fix.
 
-- Parsed Maven XML and all YAML configuration files.
-- Confirmed no direct standalone Dough imports remain.
-- Confirmed all relocated imports are already represented in the upstream FluffyMachines source baseline.
-- Confirmed the complete source still contains no CJK text.
-- Confirmed no whitespace errors in the generated patch.
+### Corrections
 
-The updated source still needs `mvn -B verify --file pom.xml` rerun in GitHub Actions because this local workspace does not include Maven, Java 25, or the external dependency cache.
+- Replaced the Lombok-generated Portable Charger enum constructor with an explicit Java constructor.
+- Removed all remaining Lombok annotations, imports, and the Maven dependency.
+- Updated the synthetic explosion event to the Paper 26.2 five-argument constructor using `ExplosionResult.DESTROY`.
+- Migrated all removed particle and potion-effect names.
+- Migrated the removal-pending block-break effect.
+- Restored the two missing utility imports.
+- Updated GitHub Actions to the Node 24-based `actions/checkout@v5` and `actions/setup-java@v5` releases.
+- Updated Maven Compiler Plugin to 3.14.1 and Maven Shade Plugin to 3.6.2.
+- Added CI guards against the removed Paper names and against reintroducing Lombok.
+- Bumped the maintenance version to `26.2.2-legacy-english`.
+
+## Local verification
+
+- Maven XML and all YAML files parse successfully.
+- No standalone Dough imports remain.
+- No Lombok references remain.
+- No removed Paper particle or potion constants remain.
+- No CJK text remains in source, resources, documentation, or GitHub configuration.
+- `git diff --check` reports no whitespace errors.
+
+A complete Maven compile still must run in GitHub Actions because this workspace does not contain Maven, Java 25, or the external dependency cache.

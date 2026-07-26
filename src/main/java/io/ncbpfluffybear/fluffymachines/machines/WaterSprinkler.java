@@ -108,7 +108,7 @@ public class WaterSprinkler extends AbstractGrowthAccelerator {
                     final Block block = b.getRelative(x, 0, z);
 
                     if (particles.getValue()) {
-                        block.getWorld().spawnParticle(Particle.WATER_SPLASH, block.getLocation().add(0.5D, 0.5D,
+                        block.getWorld().spawnParticle(Particle.SPLASH, block.getLocation().add(0.5D, 0.5D,
                             0.5D), 4, 0.1F, 0.1F, 0.1F);
                     }
 
@@ -144,7 +144,7 @@ public class WaterSprinkler extends AbstractGrowthAccelerator {
                     ageable.setAge(ageable.getAge() + 1);
                     crop.setBlockData(ageable);
 
-                    crop.getWorld().spawnParticle(Particle.VILLAGER_HAPPY, crop.getLocation().add(0.5D, 0.5D, 0.5D),
+                    crop.getWorld().spawnParticle(Particle.HAPPY_VILLAGER, crop.getLocation().add(0.5D, 0.5D, 0.5D),
                         4, 0.1F, 0.1F, 0.1F);
                 }
             }

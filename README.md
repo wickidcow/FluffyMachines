@@ -31,6 +31,8 @@ The conversion is applied in the addon source instead of depending on a packet t
 - Fixed Fluffy Barrel metadata matching for metadata-free items.
 - Carried forward newer Auto Ancient Altar broken-spawner handling.
 - Prevented Portable Chargers from charging another Portable Charger.
+- Removed the Java 25 annotation-processing dependency by replacing all Lombok-generated code with explicit Java.
+- Updated removed Paper 26.2 particle, potion-effect, explosion-event, and block-effect APIs.
 - Added additional null/legacy-item guards for recipe keys, Warp Pad Configurators, Watering Cans, and Smart Factory displays.
 
 See [PATCH_NOTES.md](PATCH_NOTES.md) for technical details.

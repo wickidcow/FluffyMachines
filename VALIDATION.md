@@ -8,6 +8,9 @@
 - All Dough imports use the Slimefun-relocated namespace `io.github.thebusybiscuit.slimefun4.libraries.dough`; no incompatible direct `io.github.bakedlibs.dough` imports remain.
 - No calls remain to the deprecated slot-list backpack save overloads.
 - Paper API targeting is set to 26.2+ and the Java release is set to 25.
+- All Lombok annotations/imports and the Lombok Maven dependency have been removed.
+- Removed Paper constants (`WATER_SPLASH`, `VILLAGER_HAPPY`, `REDSTONE`, and `SLOW`) no longer appear.
+- The synthetic explosion event uses the Paper 26.2 five-argument constructor.
 - `plugin.yml` declares `api-version: '26.2'`.
 - Dolly source assertions confirmed:
   - no fixed time-based timeout;
@@ -24,7 +27,7 @@
 
 ## Full build status
 
-The first GitHub Actions run reached Java compilation and exposed incompatible direct Dough imports. Version 26.2.1 restores all affected imports to the namespace shaded and exposed by Slimefun Legacy. A complete Maven rerun of this corrected source was not possible in this workspace because Maven, Java 25, and the external dependency cache are unavailable here. The included workflow runs `mvn -B verify` with Temurin Java 25 and now rejects an incompatible direct Dough import before starting the build.
+The first GitHub Actions run exposed incompatible direct Dough imports, which 26.2.1 corrected. The second run progressed further and exposed the remaining Paper 26.2 and Java 25 incompatibilities. Version 26.2.2 removes Lombok, supplies the Portable Charger enum constructor explicitly, updates the explosion-event signature, migrates removed particle and potion constants, replaces the removal-pending block-break effect, and restores the missing Backpack Loader/Unloader utility imports. A complete Maven rerun is not possible in this workspace because Maven, Java 25, and the external dependency cache are unavailable here. The included workflow runs `mvn -B verify` with Temurin Java 25 and now rejects incompatible Dough imports, removed Paper API names, and Lombok usage before compilation.
 
 To compile against a separately published Albion Slimefun Legacy artifact, override the exposed Maven properties described in `README.md`.
 

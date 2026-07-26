@@ -36,6 +36,14 @@ jobs:
             echo 'Lombok must not be required by this Java 25 build.'
             exit 1
           fi
+      - name: Verify English Dolly owner lore
+        run: |
+          if grep -R --line-number 'PlayerBackpack\.LORE_OWNER' src/main/java/io/ncbpfluffybear/fluffymachines/utils/FluffyItems.java; then
+            echo 'Dolly owner lore must not inherit a translated dependency constant.'
+            exit 1
+          fi
+          grep -q 'DOLLY_OWNER_LORE = "&7Owner: "' src/main/java/io/ncbpfluffybear/fluffymachines/utils/FluffyItems.java
+          grep -q 'bindDollyItem' src/main/java/io/ncbpfluffybear/fluffymachines/items/tools/Dolly.java
       - name: Verify Gugu 2025.1 Dolly API usage
         run: |
           if grep -R --line-number -E 'getOrCreateProfileAsync|PlayerBackpack\.getAsync\([^,)]*\)|getBackpackAsync\([^,;]*\);' src/main/java; then

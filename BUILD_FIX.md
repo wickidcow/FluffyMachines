@@ -45,19 +45,11 @@ The second GitHub Actions run passed dependency resolution and the relocated Dou
 
 A complete Maven compile still must run in GitHub Actions because this workspace does not contain Maven, Java 25, or the external dependency cache.
 
-## 26.2.3 — Gugu backpack/profile API compatibility
 
-The Java 25 build then reached `Dolly.java` and exposed three source-level API mismatches against `com.github.SlimefunGuguProject:Slimefun4:2025.1`:
+## 26.2.3 — Initial Dolly storage migration
 
-- `ProfileDataController#getOrCreateProfileAsync(Player)` is not part of this API.
-- `PlayerBackpack#getAsync(ItemStack)` is not available; this fork exposes the callback overload and controller `CompletableFuture` reads.
-- Both pickup and placement therefore needed a source-level migration rather than a compiled-JAR-only workaround.
+The next build reached Dolly and showed that profile creation and `PlayerBackpack#getAsync(ItemStack)` differed from the Legacy/Gugu API. Profile preparation was migrated to `PlayerProfile.get(...)`, but the first storage-controller implementation incorrectly assumed newer one-argument future overloads.
 
-### Corrections
+## 26.2.4 — Exact Gugu 2025.1 callback signatures
 
-- Restored profile creation/loading through the public `PlayerProfile#get(OfflinePlayer, Consumer<PlayerProfile>)` API used by the original addon line.
-- Kept profile acquisition outside the Dolly transaction lock, avoiding a permanent lock when an older Gugu core is already loading the same profile and does not queue another callback.
-- Added `getBackpackFuture(ItemStack)` to resolve current PDC bindings and legacy lore bindings through `ProfileDataController#getBackpackAsync(...)`.
-- Handles successful, missing, malformed, and exceptionally completed backpack reads and always releases the Dolly operation lock without a fixed timeout.
-- Preserves migration of old lore-only Dollies to the current backpack persistent-data binding.
-- Bumped the maintenance version to `26.2.3-legacy-english`.
+The compiler identified the exact available overloads. Version 26.2.4 now uses `IAsyncReadCallback<PlayerBackpack>` with both the UUID lookup and owner/number lookup. It also removes the seven removal warnings printed by the same build by replacing `ItemStackHelper` and `Effect.VILLAGER_PLANT_GROW`.

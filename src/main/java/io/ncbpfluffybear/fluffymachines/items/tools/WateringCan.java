@@ -17,7 +17,6 @@ import io.github.thebusybiscuit.slimefun4.core.handlers.ItemUseHandler;
 import io.github.thebusybiscuit.slimefun4.implementation.items.SimpleSlimefunItem;
 import io.github.thebusybiscuit.slimefun4.api.recipes.RecipeType;
 import org.bukkit.Bukkit;
-import org.bukkit.Effect;
 import org.bukkit.FluidCollisionMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -119,7 +118,7 @@ public class WateringCan extends SimpleSlimefunItem<ItemUseHandler> implements C
                             double random = ThreadLocalRandom.current().nextDouble();
                             if (random < sugarCaneSuccessChance.getValue()) {
                                 above.setType(Material.SUGAR_CANE);
-                                blockLocation.getWorld().playEffect(blockLocation, Effect.VILLAGER_PLANT_GROW, 0);
+                                spawnGrowthParticles(blockLocation);
                             }
 
                         } else {
@@ -139,7 +138,7 @@ public class WateringCan extends SimpleSlimefunItem<ItemUseHandler> implements C
                                 double random = ThreadLocalRandom.current().nextDouble();
                                 if (random < cropSuccessChance.getValue()) {
                                     crop.setAge(currentAge + 1);
-                                    blockLocation.getWorld().playEffect(blockLocation, Effect.VILLAGER_PLANT_GROW, 0);
+                                    spawnGrowthParticles(blockLocation);
                                 }
                             }
 
@@ -170,7 +169,7 @@ public class WateringCan extends SimpleSlimefunItem<ItemUseHandler> implements C
                                 Bukkit.getPluginManager().callEvent(new StructureGrowEvent(
                                     b.getLocation(), getTreeFromSapling(saplingMaterial), false, p, Collections.singletonList(b.getState())
                                 ));
-                                blockLocation.getWorld().playEffect(blockLocation, Effect.VILLAGER_PLANT_GROW, 0);
+                                spawnGrowthParticles(blockLocation);
 
                             }
 
@@ -184,7 +183,7 @@ public class WateringCan extends SimpleSlimefunItem<ItemUseHandler> implements C
                                         getTreeFromSapling(saplingMaterial))) {
                                         b.setType(saplingMaterial);
                                     }
-                                    blockLocation.getWorld().playEffect(blockLocation, Effect.VILLAGER_PLANT_GROW, 0);
+                                    spawnGrowthParticles(blockLocation);
                                 }
                             } else {
                                 b.applyBoneMeal(p.getFacing());
@@ -194,6 +193,19 @@ public class WateringCan extends SimpleSlimefunItem<ItemUseHandler> implements C
                 }
             }
         };
+    }
+
+
+    private static void spawnGrowthParticles(Location location) {
+        location.getWorld().spawnParticle(
+            Particle.HAPPY_VILLAGER,
+            location.clone().add(0.5, 0.5, 0.5),
+            6,
+            0.25,
+            0.25,
+            0.25,
+            0.0
+        );
     }
 
     public static boolean updateUses(WateringCan can, Player p, ItemStack item, int updateType) {

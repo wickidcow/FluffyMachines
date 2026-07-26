@@ -59,10 +59,19 @@ The old Dolly could touch Bukkit block states from an asynchronous backpack call
 - Restored missing `Utils` imports in the Backpack Loader and Unloader.
 - Updated GitHub Actions to Node 24-based action releases and refreshed Maven compiler/shade plugins.
 
-## 26.2.3 Dolly source API follow-up
 
-- Replaced the nonexistent `ProfileDataController#getOrCreateProfileAsync(Player)` call with the supported `PlayerProfile#get(...)` profile-loading path.
-- Replaced the unavailable one-argument `PlayerBackpack#getAsync(ItemStack)` calls used by Dolly pickup and placement.
-- Added a future-based backpack resolver using the Gugu controller overloads for backpack UUID and legacy owner/number bindings.
-- Missing or corrupt backing records now complete the transaction cleanly and release the per-player lock without adding a time-based timeout.
-- Kept all chest and Bukkit inventory mutation on the primary server thread.
+## 26.2.4
+
+### Dolly storage API
+
+The Gugu `2025.1` artifact provides callback overloads only:
+
+- `getBackpackAsync(String, IAsyncReadCallback<PlayerBackpack>)`
+- `getBackpackAsync(OfflinePlayer, int, IAsyncReadCallback<PlayerBackpack>)`
+
+The source now uses those exact signatures and handles both `onResult` and `onResultNotFound`.
+
+### Removal-warning cleanup
+
+- Replaced GuizhanLib `ItemStackHelper` display-name calls with a local Paper 26.2-safe utility.
+- Replaced `Effect.VILLAGER_PLANT_GROW` with `Particle.HAPPY_VILLAGER`.

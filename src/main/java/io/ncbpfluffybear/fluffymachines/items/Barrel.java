@@ -23,7 +23,6 @@ import me.mrCookieSlime.Slimefun.api.inventory.BlockMenu;
 import me.mrCookieSlime.Slimefun.api.inventory.BlockMenuPreset;
 import me.mrCookieSlime.Slimefun.api.inventory.DirtyChestMenu;
 import me.mrCookieSlime.Slimefun.api.item_transport.ItemTransportFlow;
-import net.guizhanss.guizhanlib.minecraft.helper.inventory.ItemStackHelper;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
@@ -482,7 +481,7 @@ public class Barrel extends NonHopperableBlock implements DoubleHologramOwner {
         }
 
         if (inv.getItemInSlot(DISPLAY_SLOT) != null) {
-            itemName = ItemStackHelper.getDisplayName(inv.getItemInSlot(DISPLAY_SLOT));
+            itemName = Utils.getViewableName(inv.getItemInSlot(DISPLAY_SLOT));
         }
 
         if (showHologram.getValue() && (hasHolo == null || hasHolo.equals("true"))) {

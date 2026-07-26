@@ -22,12 +22,11 @@
   - backing-backpack clearing after successful placement;
   - rollback handling after failed placement.
 - Portable Charger anti-duplication branching and Fluffy Barrel metadata matching are present.
-- A Java parser pass over all production `.java` files found no syntax-pattern diagnostics. The parser reported missing external packages because dependency artifacts are not installed in this environment.
 - `git diff --check` produced no whitespace-error output.
 
 ## Full build status
 
-The first GitHub Actions run exposed incompatible direct Dough imports, which 26.2.1 corrected. The second run progressed further and exposed the remaining Paper 26.2 and Java 25 incompatibilities. Version 26.2.2 removes Lombok, supplies the Portable Charger enum constructor explicitly, updates the explosion-event signature, migrates removed particle and potion constants, replaces the removal-pending block-break effect, and restores the missing Backpack Loader/Unloader utility imports. Version 26.2.3 then migrates Dolly profile and backpack loading to the source APIs actually exposed by the Gugu 2025.1 dependency. A complete Maven rerun is not possible in this workspace because Maven, Java 25, and the external dependency cache are unavailable here. The included workflow runs `mvn -B verify` with Temurin Java 25 and now rejects incompatible Dough imports, removed Paper API names, Lombok usage, and the two unsupported Dolly API call patterns before compilation.
+The first GitHub Actions run exposed incompatible direct Dough imports, which 26.2.1 corrected. The second run progressed further and exposed the remaining Paper 26.2 and Java 25 incompatibilities. Version 26.2.4 additionally uses the exact callback-based backpack overloads supplied by the Gugu `2025.1` dependency. It removes the two invalid one-argument controller calls and clears the seven removal warnings shown in the 26.2.3 build. A complete Maven rerun is not possible in this workspace because Maven, Java 25, and the external dependency cache are unavailable here. The included workflow runs `mvn -B verify` with Temurin Java 25 and rejects incompatible Dough imports, unsupported Dolly calls, removed Paper API names, removal-pending helper APIs, and Lombok usage before compilation.
 
 To compile against a separately published Albion Slimefun Legacy artifact, override the exposed Maven properties described in `README.md`.
 

@@ -12,6 +12,8 @@ import io.github.thebusybiscuit.slimefun4.implementation.items.SimpleSlimefunIte
 import io.github.thebusybiscuit.slimefun4.libraries.dough.protection.Interaction;
 import io.ncbpfluffybear.fluffymachines.FluffyMachines;
 import io.ncbpfluffybear.fluffymachines.utils.Utils;
+import com.xzavier0722.mc.plugin.slimefun4.storage.callback.IAsyncReadCallback;
+import com.xzavier0722.mc.plugin.slimefun4.storage.controller.ProfileDataController;
 import com.xzavier0722.mc.plugin.slimefun4.storage.util.StorageCacheUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -37,7 +39,6 @@ import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
 import java.util.UUID;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
@@ -178,14 +179,13 @@ public class Dolly extends SimpleSlimefunItem<ItemUseHandler> {
     }
 
     /**
-     * Loads a bound Dolly using the CompletableFuture API exposed by the Gugu
+     * Loads a bound Dolly through the callback API exposed by the Gugu 2025.1
      * profile data controller.
      *
-     * <p>The public {@link PlayerBackpack#getAsync(ItemStack, Consumer, boolean)}
-     * callback is not invoked when the record is missing. Loading through the
-     * controller lets this class handle success, failure, and missing storage,
-     * ensuring the per-player operation lock is always released without an
-     * arbitrary timeout.</p>
+     * <p>The callback reports both successful reads and missing records. Every
+     * callback is funneled through {@link #runDollyOperation(Player, Runnable)}
+     * so Bukkit inventory work returns to the primary thread and the operation
+     * lock is released without an arbitrary timeout.</p>
      */
     private void loadBackpackAsync(
         ItemStack dolly,
@@ -193,46 +193,48 @@ public class Dolly extends SimpleSlimefunItem<ItemUseHandler> {
         Consumer<PlayerBackpack> onFound,
         Runnable onNotFound
     ) {
-        getBackpackFuture(dolly).whenComplete((backpack, failure) ->
-            runDollyOperation(player, () -> {
-                if (failure != null) {
-                    reportStorageFailure(player, failure);
-                    return;
-                }
-
-                if (backpack == null) {
-                    onNotFound.run();
-                    return;
-                }
-
-                // Upgrade legacy lore-only bindings to the current persistent-data format.
-                PlayerBackpack.setItemPdc(
-                    dolly,
-                    backpack.getUniqueId().toString(),
-                    backpack.getOwner().getUniqueId().toString()
-                );
-                onFound.accept(backpack);
-            })
-        );
-    }
-
-    private CompletableFuture<PlayerBackpack> getBackpackFuture(ItemStack dolly) {
         ItemMeta meta = dolly.getItemMeta();
         if (meta == null) {
-            return CompletableFuture.completedFuture(null);
+            runDollyOperation(player, onNotFound);
+            return;
         }
 
+        IAsyncReadCallback<PlayerBackpack> callback = new IAsyncReadCallback<>() {
+            @Override
+            public void onResult(PlayerBackpack backpack) {
+                runDollyOperation(player, () -> {
+                    if (backpack == null) {
+                        onNotFound.run();
+                        return;
+                    }
+
+                    // Upgrade legacy lore-only bindings to persistent item data.
+                    PlayerBackpack.setItemPdc(
+                        dolly,
+                        backpack.getUniqueId().toString(),
+                        backpack.getOwner().getUniqueId().toString()
+                    );
+                    onFound.accept(backpack);
+                });
+            }
+
+            @Override
+            public void onResultNotFound() {
+                runDollyOperation(player, onNotFound);
+            }
+        };
+
+        ProfileDataController controller = Slimefun.getDatabaseManager().getProfileDataController();
         Optional<String> backpackUuid = PlayerBackpack.getBackpackUUID(meta);
         if (backpackUuid.isPresent()) {
             try {
-                // Reject malformed item data before dispatching a database lookup.
+                // Reject malformed item data before dispatching a database read.
                 UUID.fromString(backpackUuid.get());
-                return Slimefun.getDatabaseManager()
-                    .getProfileDataController()
-                    .getBackpackAsync(backpackUuid.get());
+                controller.getBackpackAsync(backpackUuid.get(), callback);
             } catch (IllegalArgumentException ex) {
-                return CompletableFuture.failedFuture(ex);
+                runDollyOperation(player, () -> reportStorageFailure(player, ex));
             }
+            return;
         }
 
         OptionalInt backpackId = meta.hasLore()
@@ -240,15 +242,15 @@ public class Dolly extends SimpleSlimefunItem<ItemUseHandler> {
             : OptionalInt.empty();
         Optional<UUID> ownerUuid = getLegacyOwnerUuid(meta);
         if (backpackId.isPresent() && ownerUuid.isPresent()) {
-            return Slimefun.getDatabaseManager()
-                .getProfileDataController()
-                .getBackpackAsync(
-                    Bukkit.getOfflinePlayer(ownerUuid.get()),
-                    backpackId.getAsInt()
-                );
+            controller.getBackpackAsync(
+                Bukkit.getOfflinePlayer(ownerUuid.get()),
+                backpackId.getAsInt(),
+                callback
+            );
+            return;
         }
 
-        return CompletableFuture.completedFuture(null);
+        runDollyOperation(player, onNotFound);
     }
 
     @Nonnull

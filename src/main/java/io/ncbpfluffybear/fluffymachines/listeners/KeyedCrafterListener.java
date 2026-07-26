@@ -9,7 +9,6 @@ import io.github.thebusybiscuit.slimefun4.implementation.SlimefunItems;
 import io.ncbpfluffybear.fluffymachines.machines.AutoCraftingTable;
 import io.ncbpfluffybear.fluffymachines.machines.SmartFactory;
 import io.ncbpfluffybear.fluffymachines.utils.Utils;
-import net.guizhanss.guizhanlib.minecraft.helper.inventory.ItemStackHelper;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.entity.Player;
@@ -84,7 +83,7 @@ public class KeyedCrafterListener implements Listener {
                         AutoCraftingTable.createKeyItem(item.getType())
                 );
 
-                Utils.send(p, "&aTarget item set to " + ItemStackHelper.getDisplayName(item)
+                Utils.send(p, "&aTarget item set to " + Utils.getViewableName(item)
                 );
             }
         }

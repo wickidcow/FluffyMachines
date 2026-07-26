@@ -36,5 +36,11 @@ jobs:
             echo 'Lombok must not be required by this Java 25 build.'
             exit 1
           fi
+      - name: Verify Gugu 2025.1 Dolly API usage
+        run: |
+          if grep -R --line-number -E 'getOrCreateProfileAsync|PlayerBackpack\.getAsync\([^,)]*\)' src/main/java; then
+            echo 'Unsupported Dolly profile/backpack API call detected.'
+            exit 1
+          fi
       - name: Build with Maven
         run: mvn -B verify --file pom.xml

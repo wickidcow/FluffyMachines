@@ -38,8 +38,14 @@ jobs:
           fi
       - name: Verify Gugu 2025.1 Dolly API usage
         run: |
-          if grep -R --line-number -E 'getOrCreateProfileAsync|PlayerBackpack\.getAsync\([^,)]*\)' src/main/java; then
-            echo 'Unsupported Dolly profile/backpack API call detected.'
+          if grep -R --line-number -E 'getOrCreateProfileAsync|PlayerBackpack\.getAsync\([^,)]*\)|getBackpackAsync\([^,;]*\);' src/main/java; then
+            echo 'Unsupported one-argument Dolly profile/backpack API call detected.'
+            exit 1
+          fi
+      - name: Verify removal-pending compatibility APIs
+        run: |
+          if grep -R --line-number -E 'ItemStackHelper|Effect\.VILLAGER_PLANT_GROW' src/main/java; then
+            echo 'Removal-pending inventory-name or plant-effect API detected.'
             exit 1
           fi
       - name: Build with Maven

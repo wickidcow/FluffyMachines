@@ -58,3 +58,11 @@ The old Dolly could touch Bukkit block states from an asynchronous backpack call
 - Replaced removal-pending `Effect.STEP_SOUND` with `Effect.DESTROY_BLOCK` and block data.
 - Restored missing `Utils` imports in the Backpack Loader and Unloader.
 - Updated GitHub Actions to Node 24-based action releases and refreshed Maven compiler/shade plugins.
+
+## 26.2.3 Dolly source API follow-up
+
+- Replaced the nonexistent `ProfileDataController#getOrCreateProfileAsync(Player)` call with the supported `PlayerProfile#get(...)` profile-loading path.
+- Replaced the unavailable one-argument `PlayerBackpack#getAsync(ItemStack)` calls used by Dolly pickup and placement.
+- Added a future-based backpack resolver using the Gugu controller overloads for backpack UUID and legacy owner/number bindings.
+- Missing or corrupt backing records now complete the transaction cleanly and release the per-player lock without adding a time-based timeout.
+- Kept all chest and Bukkit inventory mutation on the primary server thread.

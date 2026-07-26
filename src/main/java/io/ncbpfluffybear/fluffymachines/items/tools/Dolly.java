@@ -4,6 +4,7 @@ import io.github.thebusybiscuit.slimefun4.api.items.ItemGroup;
 import io.github.thebusybiscuit.slimefun4.api.items.ItemSetting;
 import io.github.thebusybiscuit.slimefun4.api.items.SlimefunItemStack;
 import io.github.thebusybiscuit.slimefun4.api.player.PlayerBackpack;
+import io.github.thebusybiscuit.slimefun4.api.player.PlayerProfile;
 import io.github.thebusybiscuit.slimefun4.api.recipes.RecipeType;
 import io.github.thebusybiscuit.slimefun4.core.handlers.ItemUseHandler;
 import io.github.thebusybiscuit.slimefun4.implementation.Slimefun;
@@ -13,6 +14,7 @@ import io.ncbpfluffybear.fluffymachines.FluffyMachines;
 import io.ncbpfluffybear.fluffymachines.utils.Utils;
 import com.xzavier0722.mc.plugin.slimefun4.storage.util.StorageCacheUtils;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.block.Block;
@@ -31,9 +33,13 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
+import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Consumer;
 
 /**
  * A portable chest mover backed by a Slimefun player backpack.
@@ -101,10 +107,6 @@ public class Dolly extends SimpleSlimefunItem<ItemUseHandler> {
     }
 
     private void startPickup(ItemStack dolly, Block chest, Player player) {
-        if (!beginOperation(player)) {
-            return;
-        }
-
         ItemMeta meta = dolly.getItemMeta();
         boolean isBound = meta != null
             && (PlayerBackpack.getBackpackUUID(meta).isPresent()
@@ -112,36 +114,176 @@ public class Dolly extends SimpleSlimefunItem<ItemUseHandler> {
 
         try {
             if (!isBound) {
-                Slimefun.getDatabaseManager().getProfileDataController().getOrCreateProfileAsync(player)
-                    .whenComplete((profile, failure) -> runDollyOperation(player, () -> {
-                        if (failure != null || profile == null) {
-                            reportStorageFailure(player, failure);
+                // Keep profile loading outside the Dolly operation lock. PlayerProfile#get may
+                // finish asynchronously, and older Gugu builds do not queue a second callback
+                // while the same profile is already loading.
+                PlayerProfile.get(player, profile -> {
+                    if (!beginOperation(player)) {
+                        return;
+                    }
+
+                    runDollyOperation(player, () -> {
+                        ItemMeta currentMeta = dolly.getItemMeta();
+                        boolean becameBound = currentMeta != null
+                            && (PlayerBackpack.getBackpackUUID(currentMeta).isPresent()
+                                || currentMeta.hasLore()
+                                    && PlayerBackpack.getBackpackID(currentMeta).isPresent());
+
+                        if (becameBound) {
+                            Utils.send(player, "&eThe Dolly storage was prepared. Use it again.");
                             return;
                         }
 
-                        PlayerBackpack backpack = Slimefun.getDatabaseManager()
-                            .getProfileDataController()
-                            .createBackpack(player, "&bDolly", profile.nextBackpackNum(), DOUBLE_CHEST_SIZE);
-                        PlayerBackpack.bindItem(dolly, backpack);
-                        backpack.getInventory().clear();
-                        backpack.getInventory().setItem(0, LOCK_ITEM);
-                        saveBackpack(backpack);
-                        pickupChest(dolly, backpack, chest, player);
-                    }));
-            } else {
-                PlayerBackpack.getAsync(dolly).whenComplete((backpack, failure) ->
-                    runDollyOperation(player, () -> {
-                        if (failure != null || backpack == null) {
-                            reportStorageFailure(player, failure);
-                            return;
-                        }
-                        pickupChest(dolly, backpack, chest, player);
-                    }));
+                        createBackpackAndPickup(dolly, chest, player, profile);
+                    });
+                });
+                return;
             }
+
+            if (!beginOperation(player)) {
+                return;
+            }
+
+            loadBackpackAsync(
+                dolly,
+                player,
+                backpack -> pickupChest(dolly, backpack, chest, player),
+                () -> reportStorageFailure(player, null)
+            );
         } catch (RuntimeException ex) {
             activeOperations.remove(player.getUniqueId());
             reportStorageFailure(player, ex);
         }
+    }
+
+    private void createBackpackAndPickup(
+        ItemStack dolly,
+        Block chest,
+        Player player,
+        PlayerProfile profile
+    ) {
+        if (profile == null) {
+            reportStorageFailure(player, null);
+            return;
+        }
+
+        PlayerBackpack backpack = Slimefun.getDatabaseManager()
+            .getProfileDataController()
+            .createBackpack(player, "&bDolly", profile.nextBackpackNum(), DOUBLE_CHEST_SIZE);
+        PlayerBackpack.bindItem(dolly, backpack);
+        backpack.getInventory().clear();
+        backpack.getInventory().setItem(0, LOCK_ITEM);
+        saveBackpack(backpack);
+        pickupChest(dolly, backpack, chest, player);
+    }
+
+    /**
+     * Loads a bound Dolly using the CompletableFuture API exposed by the Gugu
+     * profile data controller.
+     *
+     * <p>The public {@link PlayerBackpack#getAsync(ItemStack, Consumer, boolean)}
+     * callback is not invoked when the record is missing. Loading through the
+     * controller lets this class handle success, failure, and missing storage,
+     * ensuring the per-player operation lock is always released without an
+     * arbitrary timeout.</p>
+     */
+    private void loadBackpackAsync(
+        ItemStack dolly,
+        Player player,
+        Consumer<PlayerBackpack> onFound,
+        Runnable onNotFound
+    ) {
+        getBackpackFuture(dolly).whenComplete((backpack, failure) ->
+            runDollyOperation(player, () -> {
+                if (failure != null) {
+                    reportStorageFailure(player, failure);
+                    return;
+                }
+
+                if (backpack == null) {
+                    onNotFound.run();
+                    return;
+                }
+
+                // Upgrade legacy lore-only bindings to the current persistent-data format.
+                PlayerBackpack.setItemPdc(
+                    dolly,
+                    backpack.getUniqueId().toString(),
+                    backpack.getOwner().getUniqueId().toString()
+                );
+                onFound.accept(backpack);
+            })
+        );
+    }
+
+    private CompletableFuture<PlayerBackpack> getBackpackFuture(ItemStack dolly) {
+        ItemMeta meta = dolly.getItemMeta();
+        if (meta == null) {
+            return CompletableFuture.completedFuture(null);
+        }
+
+        Optional<String> backpackUuid = PlayerBackpack.getBackpackUUID(meta);
+        if (backpackUuid.isPresent()) {
+            try {
+                // Reject malformed item data before dispatching a database lookup.
+                UUID.fromString(backpackUuid.get());
+                return Slimefun.getDatabaseManager()
+                    .getProfileDataController()
+                    .getBackpackAsync(backpackUuid.get());
+            } catch (IllegalArgumentException ex) {
+                return CompletableFuture.failedFuture(ex);
+            }
+        }
+
+        OptionalInt backpackId = meta.hasLore()
+            ? PlayerBackpack.getBackpackID(meta)
+            : OptionalInt.empty();
+        Optional<UUID> ownerUuid = getLegacyOwnerUuid(meta);
+        if (backpackId.isPresent() && ownerUuid.isPresent()) {
+            return Slimefun.getDatabaseManager()
+                .getProfileDataController()
+                .getBackpackAsync(
+                    Bukkit.getOfflinePlayer(ownerUuid.get()),
+                    backpackId.getAsInt()
+                );
+        }
+
+        return CompletableFuture.completedFuture(null);
+    }
+
+    @Nonnull
+    private Optional<UUID> getLegacyOwnerUuid(ItemMeta meta) {
+        Optional<String> ownerPdc = PlayerBackpack.getOwnerUUID(meta);
+        if (ownerPdc.isPresent()) {
+            try {
+                return Optional.of(UUID.fromString(ownerPdc.get()));
+            } catch (IllegalArgumentException ignored) {
+                // Fall back to the legacy lore binding below.
+            }
+        }
+
+        if (!meta.hasLore() || meta.getLore() == null) {
+            return Optional.empty();
+        }
+
+        for (String line : meta.getLore()) {
+            String plain = ChatColor.stripColor(line);
+            if (plain == null || !plain.startsWith("ID: ")) {
+                continue;
+            }
+
+            int separator = plain.lastIndexOf('#');
+            if (separator <= 4) {
+                continue;
+            }
+
+            try {
+                return Optional.of(UUID.fromString(plain.substring(4, separator)));
+            } catch (IllegalArgumentException ignored) {
+                // Ignore malformed legacy lore and continue searching.
+            }
+        }
+        return Optional.empty();
     }
 
     private boolean beginOperation(Player player) {
@@ -272,16 +414,12 @@ public class Dolly extends SimpleSlimefunItem<ItemUseHandler> {
         }
 
         try {
-            PlayerBackpack.getAsync(dolly).whenComplete((backpack, failure) ->
-                runDollyOperation(player, () -> {
-                    if (failure != null) {
-                        reportStorageFailure(player, failure);
-                    } else if (backpack == null) {
-                        Utils.send(player, "&cThis Dolly is not carrying a chest.");
-                    } else {
-                        placeChestSync(dolly, backpack, target, player);
-                    }
-                }));
+            loadBackpackAsync(
+                dolly,
+                player,
+                backpack -> placeChestSync(dolly, backpack, target, player),
+                () -> Utils.send(player, "&cThis Dolly is not carrying a chest.")
+            );
         } catch (RuntimeException ex) {
             activeOperations.remove(player.getUniqueId());
             reportStorageFailure(player, ex);

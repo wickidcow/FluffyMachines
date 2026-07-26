@@ -73,3 +73,7 @@ Portable Chargers, Fluffy Wrenches, improved explosive tools, improved Lumber Ax
 ## Credits
 
 Original addon by NCBPFluffyBear. This branch keeps the original addon identity and item IDs while integrating later upstream/Gugu maintenance work and Albion-specific compatibility repairs.
+
+## Developer note for 26.2.3
+
+The Dolly implementation intentionally does not call `getOrCreateProfileAsync(Player)` or the one-argument `PlayerBackpack.getAsync(ItemStack)`. Those methods are not available in the target Gugu `2025.1` addon API. Profile initialization uses `PlayerProfile.get(...)`, while bound Dolly storage is resolved through the profile data controller's `CompletableFuture` backpack lookup methods. This keeps the source directly buildable by other developers against the declared dependency instead of relying on a locally patched binary.

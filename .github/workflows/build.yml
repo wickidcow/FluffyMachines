@@ -6,6 +6,9 @@ on:
       - main
       - master
   pull_request:
+    branches:
+      - main
+      - master
   workflow_dispatch:
 
 permissions:
@@ -27,14 +30,122 @@ jobs:
           java-version: "25"
           cache: maven
 
-      - name: Verify English Dolly owner lore
+      - name: Verify Slimefun-relocated Dough imports
+        shell: bash
         run: |
-          if grep -R --line-number 'PlayerBackpack\.LORE_OWNER' src/main/java/io/ncbpfluffybear/fluffymachines/utils/FluffyItems.java; then
-            echo 'Dolly owner lore must not inherit a translated dependency constant.'
+          set -euo pipefail
+
+          if grep -R --line-number '^import io\.github\.bakedlibs\.dough' src/main/java; then
+            echo "Direct Dough imports are incompatible with the Slimefun-shaded API."
             exit 1
           fi
-          grep -Fq '"&7Owner: "' src/main/java/io/ncbpfluffybear/fluffymachines/utils/FluffyItems.java
-          grep -q 'normalizeOwnerLore' src/main/java/io/ncbpfluffybear/fluffymachines/items/tools/Dolly.java
+
+          echo "Slimefun-relocated Dough import check passed."
+
+      - name: Verify Paper 26.2 API compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if grep -R --line-number -E \
+            'Particle\.(WATER_SPLASH|VILLAGER_HAPPY|REDSTONE)|PotionEffectType\.SLOW\b|Effect\.(STEP_SOUND|VILLAGER_PLANT_GROW)' \
+            src/main/java; then
+            echo "Removed or removal-pending Bukkit API names are still present."
+            exit 1
+          fi
+
+          if grep -R --line-number -E \
+            '(^|[^[:alnum:]_])lombok([.;]|$)|@(SneakyThrows|UtilityClass|AllArgsConstructor|Getter)' \
+            src/main/java pom.xml; then
+            echo "Lombok must not be required by this Java 25 build."
+            exit 1
+          fi
+
+          echo "Paper 26.2 API compatibility check passed."
+
+      - name: Verify English Dolly owner lore
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ITEMS_FILE="src/main/java/io/ncbpfluffybear/fluffymachines/utils/FluffyItems.java"
+          DOLLY_FILE="src/main/java/io/ncbpfluffybear/fluffymachines/items/tools/Dolly.java"
+
+          if grep -n 'PlayerBackpack\.LORE_OWNER' "$ITEMS_FILE"; then
+            echo "Dolly owner lore must not inherit a translated dependency constant."
+            exit 1
+          fi
+
+          if ! grep -Fq 'DOLLY_OWNER_LORE = "&7Owner: "' "$ITEMS_FILE"; then
+            echo "The FluffyMachines-owned English Dolly owner prefix is missing."
+            exit 1
+          fi
+
+          if ! grep -Fq 'bindDollyItem' "$DOLLY_FILE"; then
+            echo "The local English Dolly binding implementation is missing."
+            exit 1
+          fi
+
+          echo "English Dolly owner lore check passed."
+
+      - name: Verify Gugu 2025.1 Dolly API usage
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if grep -R --line-number -E \
+            'getOrCreateProfileAsync|PlayerBackpack\.getAsync\([^,)]*\)|getBackpackAsync\([^,;]*\);' \
+            src/main/java; then
+            echo "Unsupported one-argument Dolly profile/backpack API call detected."
+            exit 1
+          fi
+
+          grep -Fq 'IAsyncReadCallback<PlayerBackpack>' \
+            src/main/java/io/ncbpfluffybear/fluffymachines/items/tools/Dolly.java
+
+          echo "Gugu Dolly API check passed."
+
+      - name: Verify removal-pending compatibility APIs
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if grep -R --line-number -E 'ItemStackHelper|Effect\.VILLAGER_PLANT_GROW' src/main/java; then
+            echo "Removal-pending compatibility API detected."
+            exit 1
+          fi
+
+          echo "Removal-pending API check passed."
+
+      - name: Verify Dolly copper chest compatibility
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          DOLLY_FILE="src/main/java/io/ncbpfluffybear/fluffymachines/items/tools/Dolly.java"
+
+          grep -Fq 'endsWith("_COPPER_CHEST")' "$DOLLY_FILE"
+          grep -Fq 'SECOND_CHEST_TYPE_KEY' "$DOLLY_FILE"
+
+          echo "Copper chest Dolly compatibility check passed."
+
+      - name: Verify optional mcMMO integration
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if grep -R --line-number -E \
+            '^import com\.gmail\.nossr50|<groupId>com\.gmail\.nossr50\.mcMMO</groupId>' \
+            src/main/java pom.xml; then
+            echo "mcMMO must remain runtime-optional and must not be a compile dependency."
+            exit 1
+          fi
+
+          grep -Eq 'softdepend:.*mcMMO' src/main/resources/plugin.yml
+          grep -Fq 'registerEvent' \
+            src/main/java/io/ncbpfluffybear/fluffymachines/utils/McMMOEvents.java
+
+          echo "Optional mcMMO integration check passed."
 
       - name: Build and verify
         run: mvn -B clean verify --file pom.xml

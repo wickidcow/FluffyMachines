@@ -19,7 +19,7 @@ The conversion is applied in the addon source instead of depending on a packet t
 ## Included maintenance repairs
 
 - Reworked Dolly pickup and placement for modern asynchronous backpack storage.
-- Supports normal, trapped, single, double, locked, and custom-named chests.
+- Supports normal, trapped, copper, single, double, locked, and custom-named chests.
 - Checks protection and Slimefun storage data on both halves of a double chest.
 - Preserves all chest inventory contents and rolls back failed transfers.
 - Clears the backing Dolly backpack only after successful placement.
@@ -81,3 +81,7 @@ Original addon by NCBPFluffyBear. This branch keeps the original addon identity 
 - Removes unsupported one-argument `ProfileDataController#getBackpackAsync` calls.
 - Removes removal-pending `ItemStackHelper` and `Effect.VILLAGER_PLANT_GROW` usage.
 - Keeps all chest and inventory mutations on the primary server thread.
+
+## 26.2.5 copper chest support
+
+Dollies can move vanilla copper chests introduced in modern Minecraft/Paper builds. All oxidation and waxed variants are accepted, and the exact variant is restored when placed. Double copper chests retain the stored material for each half.

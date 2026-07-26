@@ -49,3 +49,20 @@ Use a copy of the live server and test all of the following before replacing the
 13. Test Portable Charger insertion, removal, logout/close recovery, and Portable-Charger-to-Portable-Charger rejection.
 14. Test Fluffy Barrels with vanilla items that have no explicit metadata and with metadata-bearing items.
 15. Test Auto Ancient Altar broken-spawner repair recipes.
+
+## 26.2.5 copper chest validation
+
+The Dolly source now accepts vanilla copper chest materials using the stable Bukkit naming family `COPPER_CHEST` / `*_COPPER_CHEST`. The exact first-half and second-half materials are stored in persistent item data and validated before placement. Existing normal and trapped chest behavior is unchanged.
+
+Validated in this workspace:
+
+- all 54 Java source files parsed successfully with the Java compiler parser;
+- Maven XML and resource YAML parsed successfully;
+- all eight Paper 26.2 copper chest oxidation/wax names match the supported predicate;
+- first-half and second-half persistent-data paths are present;
+- normal/trapped chest pairing remains restricted to matching materials;
+- copper chest pairing accepts copper variants only;
+- source and resources contain no CJK text;
+- `git diff --check` passed.
+
+A complete Maven type-check still runs through the included Java 25 GitHub Actions workflow because this workspace does not contain Maven or the Paper/Slimefun dependency artifacts.

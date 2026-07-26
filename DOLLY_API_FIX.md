@@ -32,3 +32,7 @@ It does **not** expose one-argument `CompletableFuture` overloads in the `2025.1
 - rollback after failed placement;
 - backing-backpack clearing only after successful placement;
 - legacy Dolly binding migration to persistent data.
+## Copper chest compatibility
+
+Version 26.2.5 also accepts vanilla copper chests, including every oxidation and waxed variant available in Paper 26.2+. The exact material is stored on the Dolly and restored during placement. Double copper chests store the second half independently.
+

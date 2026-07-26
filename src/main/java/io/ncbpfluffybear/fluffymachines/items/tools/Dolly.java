@@ -59,6 +59,8 @@ public class Dolly extends SimpleSlimefunItem<ItemUseHandler> {
     private static final int SINGLE_CHEST_MARKER_SLOT = 27;
     private static final NamespacedKey CHEST_TYPE_KEY =
         new NamespacedKey(FluffyMachines.getInstance(), "dolly_chest_type");
+    private static final NamespacedKey SECOND_CHEST_TYPE_KEY =
+        new NamespacedKey(FluffyMachines.getInstance(), "dolly_second_chest_type");
     private static final NamespacedKey CHEST_LOCK_KEY =
         new NamespacedKey(FluffyMachines.getInstance(), "dolly_chest_lock");
     private static final NamespacedKey CHEST_NAME_KEY =
@@ -326,7 +328,32 @@ public class Dolly extends SimpleSlimefunItem<ItemUseHandler> {
     }
 
     private boolean isSupportedChest(Block block) {
-        return block.getType() == Material.CHEST || block.getType() == Material.TRAPPED_CHEST;
+        return isSupportedChestMaterial(block.getType())
+            && block.getState() instanceof org.bukkit.block.Chest;
+    }
+
+    /**
+     * Returns whether the material is a chest that the Dolly can safely move.
+     *
+     * <p>The name check intentionally covers every vanilla copper chest oxidation
+     * and waxing variant without maintaining a fragile hard-coded list. Paper
+     * exposes these as {@code COPPER_CHEST}, {@code EXPOSED_COPPER_CHEST},
+     * {@code WEATHERED_COPPER_CHEST}, {@code OXIDIZED_COPPER_CHEST}, and their
+     * waxed equivalents.</p>
+     */
+    private boolean isSupportedChestMaterial(@Nullable Material material) {
+        return material == Material.CHEST
+            || material == Material.TRAPPED_CHEST
+            || isCopperChestMaterial(material);
+    }
+
+    private boolean isCopperChestMaterial(@Nullable Material material) {
+        if (material == null) {
+            return false;
+        }
+
+        String name = material.name();
+        return name.equals("COPPER_CHEST") || name.endsWith("_COPPER_CHEST");
     }
 
     private boolean canPickupChest(Block block, Player player) {
@@ -379,6 +406,7 @@ public class Dolly extends SimpleSlimefunItem<ItemUseHandler> {
         boolean isDouble = chestInventory.getSize() == DOUBLE_CHEST_SIZE;
         ItemStack[] contents = cloneContents(chestInventory.getStorageContents());
         Material chestMaterial = chest.getType();
+        Material secondChestMaterial = getSecondChestMaterial(chest, chestBlocks);
 
         ItemStack[] previousBackpackContents = cloneContents(backpack.getInventory().getContents());
         try {
@@ -391,7 +419,13 @@ public class Dolly extends SimpleSlimefunItem<ItemUseHandler> {
             saveBackpack(backpack);
 
             // Persist chest type, lock, and custom name independently of the minecart material.
-            setStoredChestData(dolly, chestMaterial, chestState.getLock(), chestState.getCustomName());
+            setStoredChestData(
+                dolly,
+                chestMaterial,
+                secondChestMaterial,
+                chestState.getLock(),
+                chestState.getCustomName()
+            );
         } catch (RuntimeException ex) {
             restoreBackpack(backpack, previousBackpackContents);
             FluffyMachines.getInstance().getLogger().warning(
@@ -443,6 +477,7 @@ public class Dolly extends SimpleSlimefunItem<ItemUseHandler> {
         boolean singleChest = backpackContents.length <= SINGLE_CHEST_MARKER_SLOT
             || isLockItem(backpackContents[SINGLE_CHEST_MARKER_SLOT]);
         Material chestMaterial = getStoredChestMaterial(dolly);
+        Material secondChestMaterial = getStoredSecondChestMaterial(dolly, chestMaterial);
 
         if (!canChestFit(target, player, singleChest)) {
             Utils.send(player, "&cThe chest cannot be placed here!");
@@ -451,7 +486,7 @@ public class Dolly extends SimpleSlimefunItem<ItemUseHandler> {
 
         Block second = singleChest ? null : getRightBlock(target, player.getFacing().getOppositeFace());
         try {
-            createChest(target, player, singleChest, chestMaterial);
+            createChest(target, player, singleChest, chestMaterial, secondChestMaterial);
             applyStoredChestData(dolly, target, second);
 
             ItemStack[] chestContents = singleChest
@@ -502,18 +537,29 @@ public class Dolly extends SimpleSlimefunItem<ItemUseHandler> {
         return true;
     }
 
-    private void createChest(Block first, Player player, boolean singleChest, Material chestMaterial) {
+    private void createChest(
+        Block first,
+        Player player,
+        boolean singleChest,
+        Material chestMaterial,
+        Material secondChestMaterial
+    ) {
         BlockFace chestFace = player.getFacing().getOppositeFace();
-        Material material = chestMaterial == Material.TRAPPED_CHEST ? Material.TRAPPED_CHEST : Material.CHEST;
+        Material firstMaterial = isSupportedChestMaterial(chestMaterial)
+            ? chestMaterial
+            : Material.CHEST;
+        Material secondMaterial = isCompatibleChestPair(firstMaterial, secondChestMaterial)
+            ? secondChestMaterial
+            : firstMaterial;
 
-        first.setType(material, false);
+        first.setType(firstMaterial, false);
         Directional firstDirectional = (Directional) first.getBlockData();
         firstDirectional.setFacing(chestFace);
         first.setBlockData(firstDirectional, false);
 
         if (!singleChest) {
             Block second = getRightBlock(first, chestFace);
-            second.setType(material, false);
+            second.setType(secondMaterial, false);
             Directional secondDirectional = (Directional) second.getBlockData();
             secondDirectional.setFacing(chestFace);
             second.setBlockData(secondDirectional, false);
@@ -543,6 +589,20 @@ public class Dolly extends SimpleSlimefunItem<ItemUseHandler> {
             addChestHolderBlock(blocks, doubleChest.getRightSide());
         }
         return blocks;
+    }
+
+    @Nullable
+    private Material getSecondChestMaterial(Block primary, Set<Block> chestBlocks) {
+        if (chestBlocks.size() < 2) {
+            return null;
+        }
+
+        for (Block chestBlock : chestBlocks) {
+            if (!chestBlock.equals(primary)) {
+                return chestBlock.getType();
+            }
+        }
+        return null;
     }
 
     private void addChestHolderBlock(Set<Block> blocks, @Nullable InventoryHolder holder) {
@@ -585,13 +645,28 @@ public class Dolly extends SimpleSlimefunItem<ItemUseHandler> {
         Slimefun.getDatabaseManager().getProfileDataController().saveBackpackInventory(backpack);
     }
 
-    private void setStoredChestData(ItemStack dolly, Material material, String lock, @Nullable String customName) {
+    private void setStoredChestData(
+        ItemStack dolly,
+        Material material,
+        @Nullable Material secondMaterial,
+        String lock,
+        @Nullable String customName
+    ) {
         ItemMeta meta = dolly.getItemMeta();
         if (meta == null) {
             throw new IllegalStateException("Dolly item metadata is missing");
         }
 
         meta.getPersistentDataContainer().set(CHEST_TYPE_KEY, PersistentDataType.STRING, material.name());
+        if (secondMaterial == null) {
+            meta.getPersistentDataContainer().remove(SECOND_CHEST_TYPE_KEY);
+        } else {
+            meta.getPersistentDataContainer().set(
+                SECOND_CHEST_TYPE_KEY,
+                PersistentDataType.STRING,
+                secondMaterial.name()
+            );
+        }
         setOrRemove(meta, CHEST_LOCK_KEY, lock);
         setOrRemove(meta, CHEST_NAME_KEY, customName);
         dolly.setItemMeta(meta);
@@ -613,7 +688,34 @@ public class Dolly extends SimpleSlimefunItem<ItemUseHandler> {
 
         String value = meta.getPersistentDataContainer().get(CHEST_TYPE_KEY, PersistentDataType.STRING);
         Material material = value == null ? null : Material.matchMaterial(value);
-        return material == Material.TRAPPED_CHEST ? Material.TRAPPED_CHEST : Material.CHEST;
+        return isSupportedChestMaterial(material) ? material : Material.CHEST;
+    }
+
+    private Material getStoredSecondChestMaterial(ItemStack dolly, Material firstMaterial) {
+        ItemMeta meta = dolly.getItemMeta();
+        if (meta == null) {
+            return firstMaterial;
+        }
+
+        String value = meta.getPersistentDataContainer().get(
+            SECOND_CHEST_TYPE_KEY,
+            PersistentDataType.STRING
+        );
+        Material material = value == null ? null : Material.matchMaterial(value);
+        return isCompatibleChestPair(firstMaterial, material) ? material : firstMaterial;
+    }
+
+    private boolean isCompatibleChestPair(Material first, @Nullable Material second) {
+        if (!isSupportedChestMaterial(first) || !isSupportedChestMaterial(second)) {
+            return false;
+        }
+
+        if (isCopperChestMaterial(first)) {
+            return isCopperChestMaterial(second);
+        }
+
+        // Normal and trapped chests may only form doubles with the same type.
+        return first == second;
     }
 
     private void applyStoredChestData(ItemStack dolly, Block first, @Nullable Block second) {
@@ -649,6 +751,7 @@ public class Dolly extends SimpleSlimefunItem<ItemUseHandler> {
         ItemMeta meta = dolly.getItemMeta();
         if (meta != null) {
             meta.getPersistentDataContainer().remove(CHEST_TYPE_KEY);
+            meta.getPersistentDataContainer().remove(SECOND_CHEST_TYPE_KEY);
             meta.getPersistentDataContainer().remove(CHEST_LOCK_KEY);
             meta.getPersistentDataContainer().remove(CHEST_NAME_KEY);
             dolly.setItemMeta(meta);

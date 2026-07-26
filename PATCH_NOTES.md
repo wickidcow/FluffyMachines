@@ -75,3 +75,11 @@ The source now uses those exact signatures and handles both `onResult` and `onRe
 
 - Replaced GuizhanLib `ItemStackHelper` display-name calls with a local Paper 26.2-safe utility.
 - Replaced `Effect.VILLAGER_PLANT_GROW` with `Particle.HAPPY_VILLAGER`.
+
+## 26.2.5
+
+- Added Dolly support for vanilla copper chests on Paper 26.2+.
+- Supports normal, exposed, weathered, oxidized, and all waxed copper chest variants.
+- Preserves the exact oxidation and waxing material when a chest is picked up and placed.
+- Preserves each half's material independently for mixed-stage double copper chests.
+- Keeps the existing protection, lock, custom-name, rollback, and main-thread safety behavior.

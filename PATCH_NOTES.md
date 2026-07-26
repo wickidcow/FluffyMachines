@@ -5,7 +5,7 @@
 - Paper 26.2+.
 - Java 25 toolchain and bytecode.
 - Albion Slimefun Legacy derived from the SlimefunGuguProject core.
-- Current unshaded Dough namespace: `io.github.bakedlibs.dough`.
+- Slimefun-relocated Dough namespace: `io.github.thebusybiscuit.slimefun4.libraries.dough`.
 - Current snapshot-based `saveBackpackInventory(PlayerBackpack)` persistence API.
 - Existing FluffyMachines item IDs are unchanged.
 
@@ -41,7 +41,7 @@ The old Dolly could touch Bukkit block states from an asynchronous backpack call
 
 ## Additional hardening
 
-- Replaced removed shaded Dough imports throughout the addon.
+- Uses the Slimefun-relocated Dough API required by the target Gugu/Albion core. Direct `io.github.bakedlibs.dough` imports are intentionally rejected because Slimefun shades Dough and its APIs use the relocated types.
 - Updated backpack writes to the current snapshot-based save method.
 - Moved Backpack Loader/Unloader mutations to the server thread.
 - Confirmed output capacity before Backpack Unloader source deletion.

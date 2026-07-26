@@ -5,7 +5,7 @@
 - `pom.xml` parsed successfully as XML.
 - `plugin.yml`, `config.yml`, the GitHub workflow, and issue-template YAML files parsed successfully.
 - A repository-wide Unicode scan found no CJK characters in source, resources, documentation, or GitHub configuration.
-- No imports remain under the removed shaded namespace `io.github.thebusybiscuit.slimefun4.libraries.dough`.
+- All Dough imports use the Slimefun-relocated namespace `io.github.thebusybiscuit.slimefun4.libraries.dough`; no incompatible direct `io.github.bakedlibs.dough` imports remain.
 - No calls remain to the deprecated slot-list backpack save overloads.
 - Paper API targeting is set to 26.2+ and the Java release is set to 25.
 - `plugin.yml` declares `api-version: '26.2'`.
@@ -24,7 +24,7 @@
 
 ## Full build status
 
-A complete Maven build was not performed in this workspace because Maven, Java 25, and the external Paper/Slimefun dependency artifacts are unavailable here. The included GitHub Actions workflow runs `mvn -B verify` with Temurin Java 25.
+The first GitHub Actions run reached Java compilation and exposed incompatible direct Dough imports. Version 26.2.1 restores all affected imports to the namespace shaded and exposed by Slimefun Legacy. A complete Maven rerun of this corrected source was not possible in this workspace because Maven, Java 25, and the external dependency cache are unavailable here. The included workflow runs `mvn -B verify` with Temurin Java 25 and now rejects an incompatible direct Dough import before starting the build.
 
 To compile against a separately published Albion Slimefun Legacy artifact, override the exposed Maven properties described in `README.md`.
 

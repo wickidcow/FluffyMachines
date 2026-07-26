@@ -24,7 +24,7 @@ The conversion is applied in the addon source instead of depending on a packet t
 - Preserves all chest inventory contents and rolls back failed transfers.
 - Clears the backing Dolly backpack only after successful placement.
 - Replaced the fixed Dolly timeout with a per-player in-progress transaction lock.
-- Updated all Dough imports to the modern `io.github.bakedlibs.dough` package used by the target Slimefun Legacy core.
+- Uses Slimefun Legacy’s relocated Dough API at `io.github.thebusybiscuit.slimefun4.libraries.dough`, matching the target core’s shaded public types.
 - Updated backpack saves to the current snapshot-based API.
 - Prevented asynchronous Bukkit inventory mutation in the Backpack Loader and Unloader.
 - Prevented the Backpack Unloader from clearing an item before confirming output capacity.

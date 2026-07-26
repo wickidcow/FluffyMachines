@@ -1,45 +1,27 @@
 # FluffyMachines
-
-These are some thrown together machines made by me for fun :)
-I pretty much add whatever comes to mind, is suggested by me, or other addons don't want to add.
-
+ 
 Custom item settings can be changed in `plugins/Slimefun/Items.yml`
+
 
 ## Machines
 **Auto Crafting Table**: Automatically crafts vanilla recipes
-
 **Auto Armor Forge**: Automatically crafts Armor Forge recipes
-
 **Auto Magic Workbench**: Automatically crafts Magic Workbench recipes
-
 **Auto Ancient Altar**: Automatically crafts Ancient Altar recipes
-
 **Auto Table Saw**: Automatically crafts Table Saw recipes
-
 **Water Sprinkler**: Electric sprinkler that grows crops in a 2 block radius
-
 **Backpack Loader**: Moves items from inventory to backpack
-
 **Backpack Unloader**: Empties backpack into inventory
-
 **Advanced Auto Disenchanter & Ancient Book**: Allows players to disenchant specific enchants from items. Requires an Ancient Book to operate.
-
 **Electric Dust Fabricator**: Turns cobblestone into sifted ore
-
 **Electric Dust Recycler**: Turns eight of the same dust into one sifted ore
-
 **Advanced Charging Bench & ACB Upgrade Card**: A charging bench which can be upgraded using upgrade cards.
-
 ## Generators
 **Crank Generator**: Multiblock machine that generates power when clicked
-
 ## Items
 **Watering Can**: Waters plants and trees to speed up their growth
-
 **Helicopter Hat**: Allows you to float upwards when sneaking
-
 **Fireproof Rune**: Drop this on your items to prevent them from burning
-
 **Dolly**: Allows players to pick up chests and place them back down elsewhere, while retaining their inventories.
 
 ## Tools

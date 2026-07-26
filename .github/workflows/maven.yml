@@ -48,5 +48,9 @@ jobs:
             echo 'Removal-pending inventory-name or plant-effect API detected.'
             exit 1
           fi
+      - name: Verify Dolly copper chest compatibility
+        run: |
+          grep -q 'endsWith("_COPPER_CHEST")' src/main/java/io/ncbpfluffybear/fluffymachines/items/tools/Dolly.java
+          grep -q 'SECOND_CHEST_TYPE_KEY' src/main/java/io/ncbpfluffybear/fluffymachines/items/tools/Dolly.java
       - name: Build with Maven
         run: mvn -B verify --file pom.xml

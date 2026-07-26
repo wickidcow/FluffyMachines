@@ -1,4 +1,4 @@
-# FluffyMachines — Albion 26.2+ English Legacy Build
+# FluffyMachines — AlbionMC 26.2+ English Legacy Build
 
 FluffyMachines is a Slimefun addon containing automation machines, portable tools, storage blocks, cargo utilities, and multiblocks.
 

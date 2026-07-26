@@ -52,5 +52,14 @@ jobs:
         run: |
           grep -q 'endsWith("_COPPER_CHEST")' src/main/java/io/ncbpfluffybear/fluffymachines/items/tools/Dolly.java
           grep -q 'SECOND_CHEST_TYPE_KEY' src/main/java/io/ncbpfluffybear/fluffymachines/items/tools/Dolly.java
+      - name: Verify English Dolly owner lore
+        run: |
+          if grep -R --line-number 'PlayerBackpack\.LORE_OWNER' src/main/java/io/ncbpfluffybear/fluffymachines/utils/FluffyItems.java; then
+            echo 'Dolly owner lore must not inherit a translated dependency constant.'
+            exit 1
+          fi
+          grep -Fq '"&7Owner: "' src/main/java/io/ncbpfluffybear/fluffymachines/utils/FluffyItems.java
+          grep -q 'normalizeOwnerLore' src/main/java/io/ncbpfluffybear/fluffymachines/items/tools/Dolly.java
+
       - name: Build with Maven
         run: mvn -B verify --file pom.xml

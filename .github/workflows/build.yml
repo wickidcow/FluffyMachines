@@ -27,6 +27,15 @@ jobs:
           java-version: "25"
           cache: maven
 
+      - name: Verify English Dolly owner lore
+        run: |
+          if grep -R --line-number 'PlayerBackpack\.LORE_OWNER' src/main/java/io/ncbpfluffybear/fluffymachines/utils/FluffyItems.java; then
+            echo 'Dolly owner lore must not inherit a translated dependency constant.'
+            exit 1
+          fi
+          grep -Fq '"&7Owner: "' src/main/java/io/ncbpfluffybear/fluffymachines/utils/FluffyItems.java
+          grep -q 'normalizeOwnerLore' src/main/java/io/ncbpfluffybear/fluffymachines/items/tools/Dolly.java
+
       - name: Build and verify
         run: mvn -B clean verify --file pom.xml
 

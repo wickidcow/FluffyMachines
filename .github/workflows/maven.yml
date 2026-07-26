@@ -52,14 +52,13 @@ jobs:
         run: |
           grep -q 'endsWith("_COPPER_CHEST")' src/main/java/io/ncbpfluffybear/fluffymachines/items/tools/Dolly.java
           grep -q 'SECOND_CHEST_TYPE_KEY' src/main/java/io/ncbpfluffybear/fluffymachines/items/tools/Dolly.java
-      - name: Verify English Dolly owner lore
+      - name: Verify optional mcMMO integration
         run: |
-          if grep -R --line-number 'PlayerBackpack\.LORE_OWNER' src/main/java/io/ncbpfluffybear/fluffymachines/utils/FluffyItems.java; then
-            echo 'Dolly owner lore must not inherit a translated dependency constant.'
+          if grep -R --line-number -E '^import com\.gmail\.nossr50|<groupId>com\.gmail\.nossr50\.mcMMO</groupId>' src/main/java pom.xml; then
+            echo 'mcMMO must remain runtime-optional and must not be a compile dependency.'
             exit 1
           fi
-          grep -Fq '"&7Owner: "' src/main/java/io/ncbpfluffybear/fluffymachines/utils/FluffyItems.java
-          grep -q 'normalizeOwnerLore' src/main/java/io/ncbpfluffybear/fluffymachines/items/tools/Dolly.java
-
+          grep -q 'softdepend:.*mcMMO' src/main/resources/plugin.yml
+          grep -q 'registerEvent' src/main/java/io/ncbpfluffybear/fluffymachines/utils/McMMOEvents.java
       - name: Build with Maven
         run: mvn -B verify --file pom.xml

@@ -20,5 +20,11 @@ jobs:
           distribution: temurin
           java-version: 25
           cache: 'maven'
+      - name: Verify Slimefun-relocated Dough API imports
+        run: |
+          if grep -R --line-number '^import io\.github\.bakedlibs\.dough' src/main/java; then
+            echo 'Direct Dough imports are incompatible with the Slimefun-shaded API.'
+            exit 1
+          fi
       - name: Build with Maven
         run: mvn -B verify --file pom.xml

@@ -33,10 +33,8 @@ import org.bukkit.persistence.PersistentDataType;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
-import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
@@ -59,15 +57,6 @@ public class Dolly extends SimpleSlimefunItem<ItemUseHandler> {
     private static final int DOUBLE_CHEST_SIZE = 54;
     private static final int SINGLE_CHEST_SIZE = 27;
     private static final int SINGLE_CHEST_MARKER_SLOT = 27;
-    private static final String OWNER_LORE_PREFIX = ChatColor.GRAY + "Owner: ";
-    private static final Set<String> LEGACY_OWNER_LABELS = Set.of(
-        "\u6240\u6709\u8005:",
-        "\u6240\u6709\u8005\uff1a",
-        "\u62e5\u6709\u8005:",
-        "\u62e5\u6709\u8005\uff1a",
-        "\u64c1\u6709\u8005:",
-        "\u64c1\u6709\u8005\uff1a"
-    );
     private static final NamespacedKey CHEST_TYPE_KEY =
         new NamespacedKey(FluffyMachines.getInstance(), "dolly_chest_type");
     private static final NamespacedKey SECOND_CHEST_TYPE_KEY =
@@ -98,7 +87,6 @@ public class Dolly extends SimpleSlimefunItem<ItemUseHandler> {
 
             Player player = e.getPlayer();
             ItemStack dolly = e.getItem();
-            normalizeOwnerLore(dolly, null);
             Block clicked = e.getClickedBlock().get();
 
             // Never move or overwrite regular or universal Slimefun blocks.
@@ -186,7 +174,6 @@ public class Dolly extends SimpleSlimefunItem<ItemUseHandler> {
             .getProfileDataController()
             .createBackpack(player, "&bDolly", profile.nextBackpackNum(), DOUBLE_CHEST_SIZE);
         PlayerBackpack.bindItem(dolly, backpack);
-        normalizeOwnerLore(dolly, backpack.getOwner().getName());
         backpack.getInventory().clear();
         backpack.getInventory().setItem(0, LOCK_ITEM);
         saveBackpack(backpack);
@@ -229,7 +216,6 @@ public class Dolly extends SimpleSlimefunItem<ItemUseHandler> {
                         backpack.getUniqueId().toString(),
                         backpack.getOwner().getUniqueId().toString()
                     );
-                    normalizeOwnerLore(dolly, backpack.getOwner().getName());
                     onFound.accept(backpack);
                 });
             }
@@ -331,71 +317,6 @@ public class Dolly extends SimpleSlimefunItem<ItemUseHandler> {
         } else {
             Utils.runSync(wrapped);
         }
-    }
-
-    /**
-     * Replaces owner labels left by older Chinese Slimefun builds while preserving
-     * the backpack owner name and every non-owner lore line. This also removes
-     * duplicate owner lines that can be created when a legacy Dolly is rebound.
-     */
-    private void normalizeOwnerLore(ItemStack dolly, @Nullable String resolvedOwnerName) {
-        ItemMeta meta = dolly.getItemMeta();
-        if (meta == null) {
-            return;
-        }
-
-        List<String> originalLore = meta.hasLore() && meta.getLore() != null
-            ? meta.getLore()
-            : List.of();
-        List<String> normalizedLore = new ArrayList<>(originalLore.size() + 1);
-        String ownerName = resolvedOwnerName;
-        int insertionIndex = -1;
-
-        for (String line : originalLore) {
-            String plain = ChatColor.stripColor(line);
-            String detectedOwner = extractOwnerName(plain);
-            if (detectedOwner == null) {
-                normalizedLore.add(line);
-                continue;
-            }
-
-            if (insertionIndex < 0) {
-                insertionIndex = normalizedLore.size();
-            }
-            if ((ownerName == null || ownerName.isBlank()) && !detectedOwner.isBlank()) {
-                ownerName = detectedOwner;
-            }
-        }
-
-        if (insertionIndex < 0) {
-            return;
-        }
-
-        normalizedLore.add(
-            Math.min(insertionIndex, normalizedLore.size()),
-            OWNER_LORE_PREFIX + (ownerName == null ? "" : ownerName)
-        );
-        meta.setLore(normalizedLore);
-        dolly.setItemMeta(meta);
-    }
-
-    @Nullable
-    private String extractOwnerName(@Nullable String plainLore) {
-        if (plainLore == null) {
-            return null;
-        }
-
-        String trimmed = plainLore.trim();
-        if (trimmed.startsWith("Owner:")) {
-            return trimmed.substring("Owner:".length()).trim();
-        }
-
-        for (String label : LEGACY_OWNER_LABELS) {
-            if (trimmed.startsWith(label)) {
-                return trimmed.substring(label.length()).trim();
-            }
-        }
-        return null;
     }
 
     private void reportStorageFailure(Player player, @Nullable Throwable failure) {

@@ -37,6 +37,10 @@ The conversion is applied in the addon source instead of depending on a packet t
 
 See [PATCH_NOTES.md](PATCH_NOTES.md) for technical details.
 
+## Optional mcMMO integration
+
+mcMMO remains listed under `softdepend` and is detected at runtime. FluffyMachines dynamically registers its mcMMO ability listener only when mcMMO is installed and enabled. The project no longer declares mcMMO as a Maven dependency, so transient CodeMC failures cannot block normal builds. Servers without mcMMO require no extra configuration.
+
 ## Building
 
 Paper 26.2 uses Java 25. Maven is configured to resolve the newest available 26.2+ Paper API build:
@@ -85,7 +89,3 @@ Original addon by NCBPFluffyBear. This branch keeps the original addon identity 
 ## 26.2.5 copper chest support
 
 Dollies can move vanilla copper chests introduced in modern Minecraft/Paper builds. All oxidation and waxed variants are accepted, and the exact variant is restored when placed. Double copper chests retain the stored material for each half.
-
-## 26.2.6 Dolly owner lore fix
-
-The Dolly now defines its owner placeholder directly as English instead of inheriting a compile-time constant from the resolved Slimefun dependency. Existing Dollies normalize translated or duplicate owner lines the next time they are used. Running `/sf doctor repair confirm` after installing this build also repairs Dollies stored in inventories, chests, and backpacks.

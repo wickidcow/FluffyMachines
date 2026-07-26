@@ -108,15 +108,19 @@ public class FluffyMachines extends JavaPlugin implements SlimefunAddon {
             }
         }
 
-        // Register McMMO Events
-        if (getServer().getPluginManager().isPluginEnabled("McMMO")) {
-            Bukkit.getLogger().log(Level.INFO, "McMMO integration enabled!");
-            getServer().getPluginManager().registerEvents(new McMMOEvents(), this);
-        }
-
         // Registering Items
         FluffyItemSetup.setup(this);
         FluffyItemSetup.setupBarrels(this);
+
+        // mcMMO remains an optional runtime integration. The listener is registered
+        // dynamically so building FluffyMachines does not require the mcMMO API JAR.
+        if (getServer().getPluginManager().isPluginEnabled("mcMMO")) {
+            if (McMMOEvents.register(this)) {
+                getLogger().info("mcMMO integration enabled.");
+            } else {
+                getLogger().warning("mcMMO is installed, but its ability event could not be registered.");
+            }
+        }
 
         WikiUtils.setupJson(this);
 

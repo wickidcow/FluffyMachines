@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>io.ncbpfluffybear</groupId>
     <artifactId>FluffyMachines</artifactId>
-    <version>26.2.6-legacy-english</version>
+    <version>26.2.7-legacy-english</version>
 
     <properties>
         <maven.compiler.release>25</maven.compiler.release>

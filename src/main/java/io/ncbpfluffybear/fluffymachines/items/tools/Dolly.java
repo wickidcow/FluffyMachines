@@ -11,6 +11,7 @@ import io.github.thebusybiscuit.slimefun4.implementation.Slimefun;
 import io.github.thebusybiscuit.slimefun4.implementation.items.SimpleSlimefunItem;
 import io.github.thebusybiscuit.slimefun4.libraries.dough.protection.Interaction;
 import io.ncbpfluffybear.fluffymachines.FluffyMachines;
+import io.ncbpfluffybear.fluffymachines.utils.FluffyItems;
 import io.ncbpfluffybear.fluffymachines.utils.Utils;
 import com.xzavier0722.mc.plugin.slimefun4.storage.callback.IAsyncReadCallback;
 import com.xzavier0722.mc.plugin.slimefun4.storage.controller.ProfileDataController;
@@ -33,8 +34,10 @@ import org.bukkit.persistence.PersistentDataType;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
@@ -173,11 +176,74 @@ public class Dolly extends SimpleSlimefunItem<ItemUseHandler> {
         PlayerBackpack backpack = Slimefun.getDatabaseManager()
             .getProfileDataController()
             .createBackpack(player, "&bDolly", profile.nextBackpackNum(), DOUBLE_CHEST_SIZE);
-        PlayerBackpack.bindItem(dolly, backpack);
+        bindDollyItem(dolly, backpack);
         backpack.getInventory().clear();
         backpack.getInventory().setItem(0, LOCK_ITEM);
         saveBackpack(backpack);
         pickupChest(dolly, backpack, chest, player);
+    }
+
+    /**
+     * Binds a Dolly to its backing backpack without relying on the
+     * dependency-owned owner placeholder. The Gugu dependency may translate
+     * that placeholder, so FluffyMachines owns and writes its English line.
+     */
+    private void bindDollyItem(ItemStack dolly, PlayerBackpack backpack) {
+        PlayerBackpack.setItemPdc(
+            dolly,
+            backpack.getUniqueId().toString(),
+            backpack.getOwner().getUniqueId().toString()
+        );
+
+        ItemMeta meta = dolly.getItemMeta();
+        if (meta == null) {
+            throw new IllegalStateException("Dolly item metadata is missing");
+        }
+
+        List<String> lore = meta.hasLore() && meta.getLore() != null
+            ? new ArrayList<>(meta.getLore())
+            : new ArrayList<>();
+        String ownerName = backpack.getOwner().getName();
+        String ownerLine = Utils.color(
+            FluffyItems.DOLLY_OWNER_LORE + (ownerName == null ? "Unknown" : ownerName)
+        );
+
+        int ownerLineIndex = findOwnerLoreIndex(lore);
+        if (ownerLineIndex >= 0) {
+            lore.set(ownerLineIndex, ownerLine);
+        } else {
+            lore.add(ownerLine);
+        }
+
+        meta.setLore(lore);
+        String backpackName = backpack.getName();
+        if (backpackName != null && !backpackName.isBlank()) {
+            meta.setDisplayName(Utils.color(backpackName));
+        }
+        dolly.setItemMeta(meta);
+    }
+
+    /**
+     * Finds either the English owner line or the legacy owner slot. Legacy
+     * bindings may contain a translated dependency string, so the final
+     * non-ID lore line is migrated when no English prefix is present.
+     */
+    private int findOwnerLoreIndex(List<String> lore) {
+        String ownerPrefix = ChatColor.stripColor(Utils.color(FluffyItems.DOLLY_OWNER_LORE));
+        for (int i = 0; i < lore.size(); i++) {
+            String plain = ChatColor.stripColor(lore.get(i));
+            if (plain != null && ownerPrefix != null && plain.startsWith(ownerPrefix)) {
+                return i;
+            }
+        }
+
+        for (int i = lore.size() - 1; i >= 3; i--) {
+            String plain = ChatColor.stripColor(lore.get(i));
+            if (plain != null && !plain.startsWith("ID: ")) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     /**
@@ -211,11 +277,7 @@ public class Dolly extends SimpleSlimefunItem<ItemUseHandler> {
                     }
 
                     // Upgrade legacy lore-only bindings to persistent item data.
-                    PlayerBackpack.setItemPdc(
-                        dolly,
-                        backpack.getUniqueId().toString(),
-                        backpack.getOwner().getUniqueId().toString()
-                    );
+                    bindDollyItem(dolly, backpack);
                     onFound.accept(backpack);
                 });
             }

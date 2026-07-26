@@ -83,3 +83,10 @@ The source now uses those exact signatures and handles both `onResult` and `onRe
 - Preserves the exact oxidation and waxing material when a chest is picked up and placed.
 - Preserves each half's material independently for mixed-stage double copper chests.
 - Keeps the existing protection, lock, custom-name, rollback, and main-thread safety behavior.
+
+## 26.2.7 English Dolly owner binding
+
+- Replaced `PlayerBackpack.LORE_OWNER` with FluffyMachines-owned `&7Owner: ` lore.
+- Replaced dependency `bindItem` behavior with a local Dolly binder that writes backpack UUID/owner PDC and English display lore.
+- Migrates the legacy final non-ID owner lore line when an existing Dolly is loaded.
+- Added CI checks preventing translated dependency owner lore from returning.

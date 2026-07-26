@@ -2,7 +2,6 @@ package io.ncbpfluffybear.fluffymachines.utils;
 
 import dev.j3fftw.extrautils.utils.LoreBuilderDynamic;
 import io.github.thebusybiscuit.slimefun4.api.items.SlimefunItemStack;
-import io.github.thebusybiscuit.slimefun4.api.player.PlayerBackpack;
 import io.github.thebusybiscuit.slimefun4.core.attributes.MachineTier;
 import io.github.thebusybiscuit.slimefun4.core.attributes.MachineType;
 import io.github.thebusybiscuit.slimefun4.utils.LoreBuilder;
@@ -35,6 +34,8 @@ import org.bukkit.inventory.meta.ItemMeta;
  * Specifies all plugin items
  */
 public class FluffyItems {
+
+    public static final String DOLLY_OWNER_LORE = "&7Owner: ";
 
     private FluffyItems() {
     }
@@ -346,7 +347,7 @@ public class FluffyItems {
         "",
         "&7Right-click to pick up a chest",
         "",
-        PlayerBackpack.LORE_OWNER
+        DOLLY_OWNER_LORE
     );
 
     public static final SlimefunItemStack WARP_PAD = new SlimefunItemStack(

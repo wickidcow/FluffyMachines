@@ -1,4 +1,4 @@
-# FluffyMachines — AlbionMC 26.2+ English Legacy Build
+# FluffyMachines — Albion 26.2+ English Legacy Build
 
 FluffyMachines is a Slimefun addon containing automation machines, portable tools, storage blocks, cargo utilities, and multiblocks.
 
@@ -85,3 +85,7 @@ Original addon by NCBPFluffyBear. This branch keeps the original addon identity 
 ## 26.2.5 copper chest support
 
 Dollies can move vanilla copper chests introduced in modern Minecraft/Paper builds. All oxidation and waxed variants are accepted, and the exact variant is restored when placed. Double copper chests retain the stored material for each half.
+
+## 26.2.6 Dolly owner lore fix
+
+The Dolly now defines its owner placeholder directly as English instead of inheriting a compile-time constant from the resolved Slimefun dependency. Existing Dollies normalize translated or duplicate owner lines the next time they are used. Running `/sf doctor repair confirm` after installing this build also repairs Dollies stored in inventories, chests, and backpacks.

@@ -4,11 +4,11 @@ import com.xzavier0722.mc.plugin.slimefun4.storage.util.StorageCacheUtils;
 import io.github.thebusybiscuit.slimefun4.api.items.settings.DoubleRangeSetting;
 import io.github.thebusybiscuit.slimefun4.api.items.settings.IntRangeSetting;
 import io.github.thebusybiscuit.slimefun4.implementation.Slimefun;
-import io.github.thebusybiscuit.slimefun4.libraries.dough.common.ChatColors;
+import io.github.bakedlibs.dough.common.ChatColors;
 import io.ncbpfluffybear.fluffymachines.utils.CancelPlace;
 import io.github.thebusybiscuit.slimefun4.api.items.ItemGroup;
 import io.github.thebusybiscuit.slimefun4.api.items.SlimefunItemStack;
-import io.github.thebusybiscuit.slimefun4.libraries.dough.protection.Interaction;
+import io.github.bakedlibs.dough.protection.Interaction;
 import io.ncbpfluffybear.fluffymachines.FluffyMachines;
 import io.ncbpfluffybear.fluffymachines.utils.Constants;
 import io.ncbpfluffybear.fluffymachines.utils.Utils;
@@ -38,6 +38,7 @@ import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.util.RayTraceResult;
 
 import javax.annotation.Nonnull;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
@@ -162,7 +163,7 @@ public class WateringCan extends SimpleSlimefunItem<ItemUseHandler> implements C
 
                         if (StorageCacheUtils.hasBlock(b.getLocation())) {
                             if (exoticGardenSuccessChance.getValue() == 0) {
-                                Utils.send(p, "&cYou can not water Exotic Garden plants!");
+                                Utils.send(p, "&cYou cannot water Exotic Garden plants!");
                                 return;
                             }
                             if (random < exoticGardenSuccessChance.getValue()) {
@@ -198,13 +199,23 @@ public class WateringCan extends SimpleSlimefunItem<ItemUseHandler> implements C
     public static boolean updateUses(WateringCan can, Player p, ItemStack item, int updateType) {
 
         ItemMeta meta = item.getItemMeta();
-        List<String> lore = meta.getLore();
+        if (meta == null) {
+            Utils.send(p, "&cThis Watering Can has invalid item data.");
+            return false;
+        }
+
+        List<String> lore = meta.hasLore()
+            ? new ArrayList<>(meta.getLore())
+            : new ArrayList<>();
+        while (lore.size() <= USE_INDEX) {
+            lore.add("");
+        }
         int usesLeft = meta.getPersistentDataContainer().getOrDefault(usageKey, PersistentDataType.INTEGER, 0);
 
         if (updateType == 1) {
 
             if (usesLeft == 0) {
-                Utils.send(p, "&c你需要给你的喷壶加满水!");
+                Utils.send(p, "&cYou need to fill your Watering Can!");
                 return false;
             }
             p.playSound(p.getLocation(), Sound.ENTITY_DROWNED_AMBIENT_WATER, 0.5F, 1F);
@@ -212,21 +223,22 @@ public class WateringCan extends SimpleSlimefunItem<ItemUseHandler> implements C
 
         } else if (updateType == 2) {
             p.playSound(p.getLocation(), Sound.ENTITY_DROWNED_DEATH_WATER, 0.5F, 1F);
-            Utils.send(p, "&a你已经装满了你的喷壶");
+            Utils.send(p, "&aYour Watering Can is full.");
             usesLeft = can.getUses().getValue();
 
         } else if (updateType == 3) {
             if (usesLeft == 0) {
-                Utils.send(p, "&c你需要给你的喷壶加满水!");
+                Utils.send(p, "&cYou need to fill your Watering Can!");
                 return false;
             }
             usesLeft = 0;
             p.playSound(p.getLocation(), Sound.ITEM_BUCKET_EMPTY, 0.5F, 1F);
         } else {
-            p.sendMessage("Error");
+            Utils.send(p, "&cThe Watering Can received an invalid usage update.");
+            return false;
         }
 
-        lore.set(USE_INDEX, ChatColors.color("&a剩余水量: &e" + usesLeft));
+        lore.set(USE_INDEX, ChatColors.color("&aWater remaining: &e" + usesLeft));
         meta.setLore(lore);
         meta.getPersistentDataContainer().set(usageKey, PersistentDataType.INTEGER, usesLeft);
         item.setItemMeta(meta);

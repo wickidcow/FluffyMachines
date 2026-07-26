@@ -10,7 +10,7 @@ import io.ncbpfluffybear.fluffymachines.utils.Utils;
 import io.github.thebusybiscuit.slimefun4.api.items.ItemGroup;
 
 import io.github.thebusybiscuit.slimefun4.api.items.SlimefunItemStack;
-import io.github.thebusybiscuit.slimefun4.libraries.dough.items.CustomItemStack;
+import io.github.bakedlibs.dough.items.CustomItemStack;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -45,7 +45,7 @@ public class Foundry extends MultiBlockMachine {
 
         if (blockData.getData("accessible") == null) {
             blockData.setData("accessible", "true");
-            Utils.send(p, "&e铸造厂已注册，接下来请手持岩浆桶并右键点击超热炉以加热.");
+            Utils.send(p, "&eFoundry registered. Next, hold a lava bucket and right-click the Superheated Furnace to ignite it.");
         } else if (blockData.getData("ignited") == null) {
             if (p.getInventory().getItemInMainHand().getType() == Material.LAVA_BUCKET) {
 
@@ -66,7 +66,7 @@ public class Foundry extends MultiBlockMachine {
                 blockData.setData("stand", String.valueOf(lavaStand.getUniqueId()));
                 blockData.setData("ignited", "true");
             } else {
-                Utils.send(p, "&c这个铸造厂需要岩浆进行激活!");
+                Utils.send(p, "&cThis Foundry needs lava to ignite!");
             }
         } else if (blockData.getData("ignited") != null) {
             // Reheat furnace (Cosmetic)

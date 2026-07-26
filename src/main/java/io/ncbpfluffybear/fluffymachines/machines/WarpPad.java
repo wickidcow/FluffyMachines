@@ -44,7 +44,7 @@ public class WarpPad extends NonHopperableBlock implements HologramOwner {
             @Override
             public void onPlayerPlace(@Nonnull BlockPlaceEvent e) {
                 StorageCacheUtils.setData(e.getBlockPlaced().getLocation(), "type", "none");
-                updateHologram(e.getBlockPlaced(), "&4&l无");
+                updateHologram(e.getBlockPlaced(), "&4&lNone");
             }
         };
     }

@@ -5,7 +5,7 @@ import io.github.thebusybiscuit.slimefun4.core.handlers.BlockPlaceHandler;
 import io.github.thebusybiscuit.slimefun4.core.handlers.BlockUseHandler;
 import io.github.thebusybiscuit.slimefun4.implementation.Slimefun;
 import io.github.thebusybiscuit.slimefun4.implementation.items.SimpleSlimefunItem;
-import io.github.thebusybiscuit.slimefun4.libraries.dough.common.ChatColors;
+import io.github.bakedlibs.dough.common.ChatColors;
 import io.github.thebusybiscuit.slimefun4.libraries.paperlib.PaperLib;
 import io.github.thebusybiscuit.slimefun4.utils.ChatUtils;
 import io.github.thebusybiscuit.slimefun4.utils.ChestMenuUtils;
@@ -14,7 +14,7 @@ import me.mrCookieSlime.CSCoreLibPlugin.general.Inventory.ChestMenu;
 import io.github.thebusybiscuit.slimefun4.api.recipes.RecipeType;
 import io.github.thebusybiscuit.slimefun4.api.items.ItemGroup;
 import io.github.thebusybiscuit.slimefun4.api.items.SlimefunItemStack;
-import io.github.thebusybiscuit.slimefun4.libraries.dough.items.CustomItemStack;
+import io.github.bakedlibs.dough.items.CustomItemStack;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -58,7 +58,7 @@ public class AlternateElevatorPlate extends SimpleSlimefunItem<BlockUseHandler> 
             @Override
             public void onPlayerPlace(@Nonnull BlockPlaceEvent e) {
                 Block b = e.getBlock();
-                StorageCacheUtils.setData(b.getLocation(), DATA_KEY, "&f楼层 #0");
+                StorageCacheUtils.setData(b.getLocation(), DATA_KEY, "&fFloor #0");
                 StorageCacheUtils.setData(b.getLocation(), "owner", e.getPlayer().getUniqueId().toString());
             }
         };
@@ -123,7 +123,7 @@ public class AlternateElevatorPlate extends SimpleSlimefunItem<BlockUseHandler> 
 
     @ParametersAreNonnullByDefault
     private void openFloorSelector(Block b, List<Block> floors, Player p) {
-        ChestMenu elevatorMenu = new ChestMenu("电梯");
+        ChestMenu elevatorMenu = new ChestMenu("Elevator");
         for (int i = 0; i < floors.size(); i++) {
 
             if (i > MAX_CHEST_INDEX) {
@@ -170,9 +170,9 @@ public class AlternateElevatorPlate extends SimpleSlimefunItem<BlockUseHandler> 
 
     @ParametersAreNonnullByDefault
     public void openEditor(Player p, Block b) {
-        ChestMenu menu = new ChestMenu("电梯设置");
+        ChestMenu menu = new ChestMenu("Elevator Settings");
 
-        menu.addItem(4, new CustomItemStack(Material.NAME_TAG, "&7设置楼层名字&e(点击我)", "",
+        menu.addItem(4, new CustomItemStack(Material.NAME_TAG, "&7Set floor name &e(click)", "",
             "&f" + ChatColors.color(StorageCacheUtils.getData(b.getLocation(), DATA_KEY))));
         menu.addMenuClickHandler(4, (pl, slot, item, action) -> {
             pl.closeInventory();

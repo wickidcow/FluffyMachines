@@ -9,7 +9,7 @@ import io.github.thebusybiscuit.slimefun4.api.recipes.RecipeType;
 import io.github.thebusybiscuit.slimefun4.api.items.ItemGroup;
 import io.github.thebusybiscuit.slimefun4.api.items.SlimefunItemStack;
 import me.mrCookieSlime.Slimefun.api.inventory.BlockMenu;
-import io.github.thebusybiscuit.slimefun4.libraries.dough.items.CustomItemStack;
+import io.github.bakedlibs.dough.items.CustomItemStack;
 import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.block.Block;
@@ -36,19 +36,19 @@ public class WaterSprinkler extends AbstractGrowthAccelerator {
     private static final int RADIUS = 2;
     private static final int PROGRESS_SLOT = 4;
     private static final CustomItemStack noWaterItem = new CustomItemStack(Material.BUCKET,
-        "&c没有找到水源",
+        "&cNo water source found",
         "",
-        "&c洒水机下方必须是水源!"
+        "&cA water source must be directly below the Water Sprinkler!"
     );
     private static final CustomItemStack waterFoundItem = new CustomItemStack(Material.WATER_BUCKET,
-        "&b已找到水源"
+        "&bWater source found"
     );
     private final ItemSetting<Boolean> particles = new ItemSetting<>(this, "particles", true);
 
     public WaterSprinkler(ItemGroup category, SlimefunItemStack item, RecipeType recipeType, ItemStack[] recipe) {
         super(category, item, recipeType, recipe);
 
-        createPreset(this, "&b洒水机",
+        createPreset(this, "&bWater Sprinkler",
             blockMenuPreset -> {
                 for (int i = 0; i < 9; i++)
                     blockMenuPreset.addItem(i, ChestMenuUtils.getBackground(), ChestMenuUtils.getEmptyClickHandler());

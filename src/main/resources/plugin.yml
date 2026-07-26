@@ -1,31 +1,20 @@
-## CHANGE this to the name of your plugin.
 name: FluffyMachines
-
-## CHANGE this to your username.
 author: NCBPFluffyBear
-
-## CHANGE this to a meaninful but short description of your plugin.
-description: A fun addon
-
-## CHANGE this to the path of the class that extends JavaPlugin.
+description: English maintenance build of FluffyMachines for Slimefun Legacy/Gugu-compatible cores
 main: io.ncbpfluffybear.fluffymachines.FluffyMachines
 
-## This is required and marks Slimefun as a plugin dependency.
 depend: [Slimefun, GuizhanLibPlugin]
 softdepend: [mcMMO, NoCheatPlus]
 
-## This value is automatically replaced by the version specified in your pom.xml file, do not change this.
 version: ${project.version}
-
-## This is the minimum minecraft version required to run your plugin.
-api-version: 1.14
+api-version: '26.2'
 
 commands:
   fluffymachines:
-    description: FluffyMachines Command
+    description: FluffyMachines command
     usage: /<command>
     aliases: [fm]
 
 permissions:
   fluffymachines.admin:
-    description: Allows you to use FluffyMachines admin commands
+    description: Allows use of FluffyMachines administrative commands

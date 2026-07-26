@@ -9,8 +9,8 @@ import io.github.thebusybiscuit.slimefun4.api.items.SlimefunItemStack;
 import io.github.thebusybiscuit.slimefun4.api.recipes.RecipeType;
 import io.github.thebusybiscuit.slimefun4.core.attributes.HologramOwner;
 import io.github.thebusybiscuit.slimefun4.implementation.Slimefun;
-import io.github.thebusybiscuit.slimefun4.libraries.dough.data.persistent.PersistentDataAPI;
-import io.github.thebusybiscuit.slimefun4.libraries.dough.protection.Interaction;
+import io.github.bakedlibs.dough.data.persistent.PersistentDataAPI;
+import io.github.bakedlibs.dough.protection.Interaction;
 import io.github.thebusybiscuit.slimefun4.utils.SlimefunUtils;
 import io.ncbpfluffybear.fluffymachines.FluffyMachines;
 import io.ncbpfluffybear.fluffymachines.utils.FluffyItems;
@@ -30,6 +30,7 @@ import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class WarpPadConfigurator extends SlimefunItem implements HologramOwner, Listener {
@@ -69,7 +70,17 @@ public class WarpPadConfigurator extends SlimefunItem implements HologramOwner, 
 
                 ItemStack item = p.getInventory().getItemInMainHand();
                 ItemMeta meta = item.getItemMeta();
-                List<String> lore = meta.getLore();
+                if (meta == null) {
+                    Utils.send(p, "&cThis Warp Pad Configurator has invalid item data.");
+                    return;
+                }
+
+                List<String> lore = meta.hasLore()
+                    ? new ArrayList<>(meta.getLore())
+                    : new ArrayList<>();
+                while (lore.size() <= LORE_COORDINATE_INDEX) {
+                    lore.add("");
+                }
 
                 if (e.getAction() == Action.RIGHT_CLICK_BLOCK) {
                     // Destination
@@ -80,14 +91,14 @@ public class WarpPadConfigurator extends SlimefunItem implements HologramOwner, 
                             PersistentDataAPI.setInt(meta, yCoord, b.getY());
                             PersistentDataAPI.setInt(meta, zCoord, b.getZ());
                             lore.set(LORE_COORDINATE_INDEX, ChatColor.translateAlternateColorCodes(
-                                '&', "&e连接点坐标: &7" + b.getX() + ", " + b.getY() + ", " + b.getZ()));
+                                '&', "&eLinked coordinates: &7" + b.getX() + ", " + b.getY() + ", " + b.getZ()));
 
                             meta.setLore(lore);
                             item.setItemMeta(meta);
 
-                            updateHologram(b, "&a&l终点");
+                            updateHologram(b, "&a&lDestination");
                             blockData.setData("type", "destination");
-                            Utils.send(p, "&3此传送装置已标记为&a终点&3。已记录该传送装置的坐标。");
+                            Utils.send(p, "&3This Warp Pad is now marked as the &aDestination&3. Its coordinates were saved.");
                         }, false);
                     } else if (PersistentDataAPI.hasString(meta, world) && b.getWorld().getName().equals(
                         PersistentDataAPI.getString(meta, world))) {
@@ -100,8 +111,8 @@ public class WarpPadConfigurator extends SlimefunItem implements HologramOwner, 
                             if (Math.abs(x - b.getX()) > MAX_DISTANCE.getValue()
                                 || Math.abs(z - b.getZ()) > MAX_DISTANCE.getValue()) {
 
-                                Utils.send(p, "&c传送装置之间的直线距离不能超过"
-                                    + MAX_DISTANCE.getValue() + "个方块！");
+                                Utils.send(p, "&cThe straight-line distance between Warp Pads cannot exceed "
+                                    + MAX_DISTANCE.getValue() + " blocks!");
 
                                 return;
                             }
@@ -111,16 +122,16 @@ public class WarpPadConfigurator extends SlimefunItem implements HologramOwner, 
                             blockData.setData("y", String.valueOf(y));
                             blockData.setData("z", String.valueOf(z));
 
-                            updateHologram(b, "&a&l起点");
+                            updateHologram(b, "&a&lOrigin");
 
-                            Utils.send(p, "&3此传送装置已标记为&a起点&3并设置了终点装置的坐标！");
+                            Utils.send(p, "&3This Warp Pad is now marked as the &aOrigin&3 and linked to the destination Warp Pad!");
                         }, false);
                     } else {
-                        Utils.send(p, "&c蹲下 + 右键点击传送装置设置终点，右键点击另一个传送装置设置起点!");
+                        Utils.send(p, "&cSneak-right-click a Warp Pad to select the destination, then right-click another Warp Pad to set the origin!");
                     }
                 }
             } else {
-                Utils.send(p, "&c使用传送装置配置器来配置传送装置");
+                Utils.send(p, "&cUse a Warp Pad Configurator to configure Warp Pads.");
             }
         }
     }

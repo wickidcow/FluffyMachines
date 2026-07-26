@@ -32,7 +32,7 @@ public class CrankGenerator extends MultiBlockMachine {
             ((GeneratorCore) core).addCharge(coreBlock.getLocation(), RATE);
             p.playSound(p.getLocation(), Sound.BLOCK_PISTON_EXTEND, 0.5F, 0.5F);
         } else {
-            Utils.send(p, "&c缺少发电机芯");
+            Utils.send(p, "&cMissing Generator Core.");
         }
     }
 

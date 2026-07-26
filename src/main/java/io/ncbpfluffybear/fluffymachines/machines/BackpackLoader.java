@@ -12,8 +12,8 @@ import io.github.thebusybiscuit.slimefun4.core.handlers.BlockBreakHandler;
 import io.github.thebusybiscuit.slimefun4.core.networks.energy.EnergyNetComponentType;
 import io.github.thebusybiscuit.slimefun4.implementation.Slimefun;
 import io.github.thebusybiscuit.slimefun4.implementation.items.backpacks.SlimefunBackpack;
-import io.github.thebusybiscuit.slimefun4.libraries.dough.items.CustomItemStack;
-import io.github.thebusybiscuit.slimefun4.libraries.dough.protection.Interaction;
+import io.github.bakedlibs.dough.items.CustomItemStack;
+import io.github.bakedlibs.dough.protection.Interaction;
 import me.mrCookieSlime.Slimefun.Objects.handlers.BlockTicker;
 import me.mrCookieSlime.Slimefun.api.inventory.BlockMenu;
 import me.mrCookieSlime.Slimefun.api.inventory.BlockMenuPreset;
@@ -51,7 +51,7 @@ public class BackpackLoader extends SlimefunItem implements EnergyNetComponent {
 
         addItemHandler(onBreak());
 
-        new BlockMenuPreset(getId(), "&e背包装载机") {
+        new BlockMenuPreset(getId(), "&eBackpack Loader") {
 
             @Override
             public void init() {
@@ -133,11 +133,13 @@ public class BackpackLoader extends SlimefunItem implements EnergyNetComponent {
                 if (backpackItem != null && SlimefunItem.getByItem(backpackItem) instanceof SlimefunBackpack) {
 
                     // Make sure it has an ID
-                    List<String> lore = backpackItem.getItemMeta().getLore();
-                    for (String s : lore) {
-                        if (s.equals(ChatColor.GRAY + "所有者: ")) {
-                            invalidItem = true;
-                            break;
+                    List<String> lore = backpackItem.hasItemMeta() ? backpackItem.getItemMeta().getLore() : null;
+                    if (lore != null) {
+                        for (String line : lore) {
+                            if (line.equals(ChatColor.GRAY + "Owner: ")) {
+                                invalidItem = true;
+                                break;
+                            }
                         }
                     }
                     if (!invalidItem) {
@@ -170,32 +172,37 @@ public class BackpackLoader extends SlimefunItem implements EnergyNetComponent {
         SlimefunItem sfItem = SlimefunItem.getByItem(bpItem);
         if (sfItem instanceof SlimefunBackpack) {
 
-            ItemStack transferItem = inv.getItemInSlot(occupiedInputSlot);
-
             int finalOccupiedInputSlot = occupiedInputSlot;
             PlayerBackpack.getAsync(bpItem, backpack -> {
-
-                Inventory bpinv = backpack.getInventory();
-
-                int bpSlot = bpinv.firstEmpty();
-
-                // Backpack is full
-                if (bpSlot == -1) {
-                    if (inv.getItemInSlot(OUTPUT_SLOTS[0]) == null) {
-                        moveItem(inv, BACKPACK_SLOT, OUTPUT_SLOTS[0]);
-                    }
+                if (backpack == null) {
                     return;
                 }
 
-                if (bpinv.getItem(bpSlot) == null) {
+                // Gugu/Legacy backpack callbacks may be asynchronous. Bukkit inventories and
+                // Slimefun block menus must only be changed from the primary server thread.
+                Utils.runSync(() -> {
+                    Inventory backpackInventory = backpack.getInventory();
+                    int backpackSlot = backpackInventory.firstEmpty();
 
-                    // IntelliJ wanted me to put it as a separate variable so here we are
+                    if (backpackSlot == -1) {
+                        if (inv.getItemInSlot(OUTPUT_SLOTS[0]) == null) {
+                            moveItem(inv, BACKPACK_SLOT, OUTPUT_SLOTS[0]);
+                        }
+                        return;
+                    }
+
+                    ItemStack transferItem = inv.getItemInSlot(finalOccupiedInputSlot);
+                    if (transferItem == null || backpackInventory.getItem(backpackSlot) != null) {
+                        return;
+                    }
+
+                    ItemStack storedItem = transferItem.clone();
                     inv.replaceExistingItem(finalOccupiedInputSlot, null);
-                    bpinv.setItem(bpSlot, transferItem);
-                    Slimefun.getDatabaseManager().getProfileDataController().saveBackpackInventory(backpack, bpSlot);
-
+                    backpackInventory.setItem(backpackSlot, storedItem);
+                    Slimefun.getDatabaseManager().getProfileDataController()
+                        .saveBackpackInventory(backpack);
                     removeCharge(b.getLocation(), ENERGY_CONSUMPTION);
-                }
+                });
             }, false);
         }
     }

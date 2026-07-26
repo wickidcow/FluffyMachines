@@ -1,21 +1,20 @@
 package io.ncbpfluffybear.fluffymachines.items.tools;
 
-import com.xzavier0722.mc.plugin.slimefun4.storage.util.InvStorageUtils;
-import com.xzavier0722.mc.plugin.slimefun4.storage.util.StorageCacheUtils;
 import io.github.thebusybiscuit.slimefun4.api.items.ItemGroup;
 import io.github.thebusybiscuit.slimefun4.api.items.ItemSetting;
 import io.github.thebusybiscuit.slimefun4.api.items.SlimefunItemStack;
 import io.github.thebusybiscuit.slimefun4.api.player.PlayerBackpack;
-import io.github.thebusybiscuit.slimefun4.api.player.PlayerProfile;
 import io.github.thebusybiscuit.slimefun4.api.recipes.RecipeType;
 import io.github.thebusybiscuit.slimefun4.core.handlers.ItemUseHandler;
 import io.github.thebusybiscuit.slimefun4.implementation.Slimefun;
 import io.github.thebusybiscuit.slimefun4.implementation.items.SimpleSlimefunItem;
-import io.github.thebusybiscuit.slimefun4.libraries.dough.collections.Pair;
-import io.github.thebusybiscuit.slimefun4.libraries.dough.protection.Interaction;
+import io.github.bakedlibs.dough.protection.Interaction;
+import io.ncbpfluffybear.fluffymachines.FluffyMachines;
 import io.ncbpfluffybear.fluffymachines.utils.Utils;
+import com.xzavier0722.mc.plugin.slimefun4.storage.util.StorageCacheUtils;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
 import org.bukkit.block.DoubleChest;
@@ -26,31 +25,44 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.persistence.PersistentDataType;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.LinkedHashSet;
 import java.util.Set;
-import java.util.stream.IntStream;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * A portable chest mover backed by a Slimefun player backpack.
+ *
+ * <p>All Bukkit block and inventory operations are forced onto the primary
+ * server thread. This is important because the Gugu/Legacy backpack callbacks
+ * may complete asynchronously on modern servers.</p>
+ */
 public class Dolly extends SimpleSlimefunItem<ItemUseHandler> {
 
     private static final ItemStack LOCK_ITEM = Utils.buildNonInteractable(
-            Material.DIRT, "&4&l错误", "&c你要搬到哪里?"
+        Material.DIRT, "&4&lError", "&cThis Dolly is empty."
     );
+    private static final int DOUBLE_CHEST_SIZE = 54;
+    private static final int SINGLE_CHEST_SIZE = 27;
+    private static final int SINGLE_CHEST_MARKER_SLOT = 27;
+    private static final NamespacedKey CHEST_TYPE_KEY =
+        new NamespacedKey(FluffyMachines.getInstance(), "dolly_chest_type");
+    private static final NamespacedKey CHEST_LOCK_KEY =
+        new NamespacedKey(FluffyMachines.getInstance(), "dolly_chest_lock");
+    private static final NamespacedKey CHEST_NAME_KEY =
+        new NamespacedKey(FluffyMachines.getInstance(), "dolly_chest_name");
 
-    private ItemSetting<Boolean> canPickupLockedChest = new ItemSetting<>(this, "can-pick-locked-chest", true);
-
-    private static final int DELAY = 500; // 500ms
-    private final Map<Player, Long> timeouts;
+    private final ItemSetting<Boolean> canPickupLockedChest =
+        new ItemSetting<>(this, "can-pick-locked-chest", true);
+    private final Set<UUID> activeOperations = ConcurrentHashMap.newKeySet();
 
     public Dolly(ItemGroup category, SlimefunItemStack item, RecipeType recipeType, ItemStack[] recipe) {
         super(category, item, recipeType, recipe);
-        this.timeouts = new HashMap<>();
         addItemSetting(canPickupLockedChest);
     }
 
@@ -60,215 +72,348 @@ public class Dolly extends SimpleSlimefunItem<ItemUseHandler> {
         return e -> {
             e.cancel();
 
-            Player p = e.getPlayer();
-
-            if (timeouts.containsKey(p) && timeouts.get(p) + DELAY > System.currentTimeMillis()) {
-                Utils.send(p, "&c你需要等待一会才能再次使用箱子搬运车!");
-                return;
-            }
-
-            timeouts.put(p, System.currentTimeMillis());
-
-            ItemStack dolly = e.getItem();
-
             if (!e.getClickedBlock().isPresent()) {
                 return;
             }
 
-            Block b = e.getClickedBlock().get();
+            Player player = e.getPlayer();
+            ItemStack dolly = e.getItem();
+            Block clicked = e.getClickedBlock().get();
 
-            // Block usage on Slimefun Blocks
-            if (StorageCacheUtils.hasBlock(b.getLocation())) {
+            // Never move or overwrite regular or universal Slimefun blocks.
+            if (StorageCacheUtils.hasSlimefunBlock(clicked.getLocation())) {
                 return;
             }
 
-            if (canPickupChest(b, p)) {
-                // Create dolly if not already one
-                ItemMeta meta = dolly.getItemMeta();
-                if (!PlayerBackpack.getBackpackUUID(meta).isPresent() && !PlayerBackpack.getBackpackID(meta).isPresent()){
-                    PlayerProfile.get(p, profile -> {
-                        PlayerBackpack bp = Slimefun.getDatabaseManager().getProfileDataController().createBackpack(
-                                p,
-                                "&b箱子搬运车",
-                                profile.nextBackpackNum(),
-                                54
-                        );
-                        PlayerBackpack.bindItem(dolly, bp);
-                        bp.getInventory().setItem(0, LOCK_ITEM);
-                        Slimefun.getDatabaseManager().getProfileDataController().saveBackpackInventory(bp, 0);
-                        if (Bukkit.isPrimaryThread()) {
-                            pickupChest(dolly, bp, b, p);
-                        } else {
-                            Utils.runSync(() -> pickupChest(dolly, bp, b, p));
-                        }
-                    });
-                } else {
-                    PlayerBackpack.getAsync(dolly, bp -> pickupChest(dolly, bp, b, p), true);
+            if (isSupportedChest(clicked)) {
+                if (!canPickupChest(clicked, player)) {
+                    Utils.send(player, "&cYou cannot pick up this chest.");
+                    return;
                 }
-            } else if (Slimefun.getProtectionManager().hasPermission(
-                    e.getPlayer(), b.getLocation(), Interaction.PLACE_BLOCK)
-            ) {
-                // Place new chest
-                placeChest(dolly, b.getRelative(e.getClickedFace()), p);
+
+                startPickup(dolly, clicked, player);
+                return;
             }
+
+            Block target = clicked.getRelative(e.getClickedFace());
+            placeChest(dolly, target, player);
         };
     }
 
-    private boolean canPickupChest(Block b, Player p) {
-        if (b.getType() != Material.CHEST) {
-            return false;
-        }
-        if (!canPickupLockedChest.getValue() && ((org.bukkit.block.Chest) b.getState()).isLocked()) {
-            return false;
-        }
-        return Slimefun.getProtectionManager().hasPermission(p, b.getLocation(), Interaction.BREAK_BLOCK);
-    }
-
-    private void pickupChest(ItemStack dolly, PlayerBackpack backpack, Block chest, Player p) {
-        Inventory chestInventory = ((InventoryHolder) chest.getState()).getInventory();
-
-        // Dolly full/empty status determined by lock item in first slot
-        // Make sure the dolly is empty
-        if (!isLockItem(backpack.getInventory().getItem(0))) {
-            Utils.send(p, "&c该箱子搬运车已经拿起了一个箱子!");
+    private void startPickup(ItemStack dolly, Block chest, Player player) {
+        if (!beginOperation(player)) {
             return;
         }
 
-        // Update old dollies to be able to store double chests
-        if (backpack.getSize() < 54) {
-            backpack.setSize(54);
-        }
+        ItemMeta meta = dolly.getItemMeta();
+        boolean isBound = meta != null
+            && (PlayerBackpack.getBackpackUUID(meta).isPresent()
+                || meta.hasLore() && PlayerBackpack.getBackpackID(meta).isPresent());
 
-        ItemStack[] contents = chestInventory.getContents();
-        List<Pair<ItemStack, Integer>> snapshot = InvStorageUtils.getInvSnapshot(backpack.getInventory().getContents());
-        Set<Integer> saveSlots = InvStorageUtils.getChangedSlots(snapshot, contents);
-        backpack.getInventory().setStorageContents(contents);
+        try {
+            if (!isBound) {
+                Slimefun.getDatabaseManager().getProfileDataController().getOrCreateProfileAsync(player)
+                    .whenComplete((profile, failure) -> runDollyOperation(player, () -> {
+                        if (failure != null || profile == null) {
+                            reportStorageFailure(player, failure);
+                            return;
+                        }
 
-        boolean isDouble = false;
-        // Add marker for single chests
-        if (chestInventory.getSize() == 54) { // Double chest (Avoid instanceof because of weird chest class setup)
-            isDouble = true;
-        } else {
-            backpack.getInventory().setItem(27, LOCK_ITEM);
-            saveSlots.add(27);
-        }
-        Slimefun.getDatabaseManager().getProfileDataController().saveBackpackInventory(backpack, saveSlots);
-
-        // Clear chest
-        chestInventory.clear();
-        dolly.setType(Material.CHEST_MINECART);
-
-        // Deals with async problems
-        if (isDouble) {
-            DoubleChest doubleChest = (DoubleChest) ((org.bukkit.block.Chest) chest.getState()).getInventory().getHolder();
-
-            // Set other side of chest to air
-            if (((org.bukkit.block.Chest) doubleChest.getLeftSide()).getLocation().equals(chest.getLocation())
-            ) {
-                ((org.bukkit.block.Chest) doubleChest.getRightSide()).getLocation().getBlock().setType(Material.AIR);
+                        PlayerBackpack backpack = Slimefun.getDatabaseManager()
+                            .getProfileDataController()
+                            .createBackpack(player, "&bDolly", profile.nextBackpackNum(), DOUBLE_CHEST_SIZE);
+                        PlayerBackpack.bindItem(dolly, backpack);
+                        backpack.getInventory().clear();
+                        backpack.getInventory().setItem(0, LOCK_ITEM);
+                        saveBackpack(backpack);
+                        pickupChest(dolly, backpack, chest, player);
+                    }));
             } else {
-                ((org.bukkit.block.Chest) doubleChest.getLeftSide()).getLocation().getBlock().setType(Material.AIR);
+                PlayerBackpack.getAsync(dolly).whenComplete((backpack, failure) ->
+                    runDollyOperation(player, () -> {
+                        if (failure != null || backpack == null) {
+                            reportStorageFailure(player, failure);
+                            return;
+                        }
+                        pickupChest(dolly, backpack, chest, player);
+                    }));
             }
+        } catch (RuntimeException ex) {
+            activeOperations.remove(player.getUniqueId());
+            reportStorageFailure(player, ex);
         }
-
-        chest.setType(Material.AIR);
-        Utils.send(p, "&a你拿起了箱子");
     }
 
-    private void placeChest(ItemStack dolly, Block chestBlock, Player p) {
-        PlayerBackpack.getAsync(dolly, backpack -> {
+    private boolean beginOperation(Player player) {
+        if (activeOperations.add(player.getUniqueId())) {
+            return true;
+        }
 
-            if (backpack == null) {
-                return;
+        Utils.send(player, "&cA Dolly operation is already in progress.");
+        return false;
+    }
+
+    private void runDollyOperation(Player player, Runnable operation) {
+        Runnable wrapped = () -> {
+            try {
+                operation.run();
+            } catch (RuntimeException ex) {
+                FluffyMachines.getInstance().getLogger().warning(
+                    "Dolly operation failed for " + player.getName() + ": " + ex.getMessage());
+                Utils.send(player, "&cThe Dolly operation failed safely; no contents were removed.");
+            } finally {
+                activeOperations.remove(player.getUniqueId());
+            }
+        };
+
+        if (Bukkit.isPrimaryThread()) {
+            wrapped.run();
+        } else {
+            Utils.runSync(wrapped);
+        }
+    }
+
+    private void reportStorageFailure(Player player, @Nullable Throwable failure) {
+        if (failure != null) {
+            FluffyMachines.getInstance().getLogger().warning(
+                "Could not load Dolly storage for " + player.getName() + ": " + failure.getMessage());
+        }
+        Utils.send(player, "&cThe Dolly's storage could not be loaded.");
+    }
+
+    private boolean isSupportedChest(Block block) {
+        return block.getType() == Material.CHEST || block.getType() == Material.TRAPPED_CHEST;
+    }
+
+    private boolean canPickupChest(Block block, Player player) {
+        if (!isSupportedChest(block) || StorageCacheUtils.hasSlimefunBlock(block.getLocation())) {
+            return false;
+        }
+
+        for (Block chestBlock : getChestBlocks(block)) {
+            if (StorageCacheUtils.hasSlimefunBlock(chestBlock.getLocation())) {
+                return false;
             }
 
-            // Update backpack size to fit doublechests
-            if (backpack.getSize() == 27) {
-                backpack.setSize(54);
-                backpack.getInventory().setItem(27, LOCK_ITEM); // Mark as single chest
+            if (!Slimefun.getProtectionManager().hasPermission(
+                player, chestBlock.getLocation(), Interaction.BREAK_BLOCK)) {
+                return false;
             }
 
-            final ItemStack[][] bpContents = {backpack.getInventory().getContents()};
-
-            if (isLockItem(bpContents[0][0])) {
-                Utils.send(p, "&c你必须拿起一个箱子!");
-                return;
+            org.bukkit.block.Chest state = (org.bukkit.block.Chest) chestBlock.getState();
+            if (!canPickupLockedChest.getValue() && state.isLocked()) {
+                return false;
             }
+        }
+        return true;
+    }
 
-            boolean singleChest = isLockItem(bpContents[0][27]);
-            if (!canChestFit(chestBlock, p, singleChest)) {
-                Utils.send(p, "&c该箱子无法放置于此处!");
-                return;
+    private void pickupChest(ItemStack dolly, PlayerBackpack backpack, Block chest, Player player) {
+        if (!Bukkit.isPrimaryThread()) {
+            Utils.runSync(() -> pickupChest(dolly, backpack, chest, player));
+            return;
+        }
+
+        // The block may have changed while the asynchronous backpack lookup ran.
+        if (!canPickupChest(chest, player)) {
+            Utils.send(player, "&cThe chest changed or can no longer be picked up.");
+            return;
+        }
+
+        if (!isLockItem(backpack.getInventory().getItem(0))) {
+            Utils.send(player, "&cThis Dolly is already carrying a chest!");
+            return;
+        }
+
+        if (backpack.getSize() < DOUBLE_CHEST_SIZE) {
+            backpack.setSize(DOUBLE_CHEST_SIZE);
+        }
+
+        org.bukkit.block.Chest chestState = (org.bukkit.block.Chest) chest.getState();
+        Inventory chestInventory = chestState.getInventory();
+        Set<Block> chestBlocks = getChestBlocks(chest);
+        boolean isDouble = chestInventory.getSize() == DOUBLE_CHEST_SIZE;
+        ItemStack[] contents = cloneContents(chestInventory.getStorageContents());
+        Material chestMaterial = chest.getType();
+
+        ItemStack[] previousBackpackContents = cloneContents(backpack.getInventory().getContents());
+        try {
+            // Replace every backpack slot so stale single/double chest data cannot survive.
+            backpack.getInventory().clear();
+            backpack.getInventory().setStorageContents(contents);
+            if (!isDouble) {
+                backpack.getInventory().setItem(SINGLE_CHEST_MARKER_SLOT, LOCK_ITEM);
             }
+            saveBackpack(backpack);
 
-            Utils.runSync(new BukkitRunnable() {
-                @Override
-                public void run() {
-                    createChest(chestBlock, p, singleChest);
-                    backpack.getInventory().setItem(0, LOCK_ITEM);
-                    Slimefun.getDatabaseManager().getProfileDataController().saveBackpackInventory(backpack, 0);
+            // Persist chest type, lock, and custom name independently of the minecart material.
+            setStoredChestData(dolly, chestMaterial, chestState.getLock(), chestState.getCustomName());
+        } catch (RuntimeException ex) {
+            restoreBackpack(backpack, previousBackpackContents);
+            FluffyMachines.getInstance().getLogger().warning(
+                "Could not store a Dolly chest for " + player.getName() + ": " + ex.getMessage());
+            Utils.send(player, "&cThe chest could not be picked up; it was left untouched.");
+            return;
+        }
 
-                    // Shrink contents size if single chest
-                    if (singleChest) {
-                        bpContents[0] = Arrays.copyOf(bpContents[0], 27);
+        // Clear contents before removing both halves, preventing vanilla item drops.
+        chestInventory.clear();
+        for (Block chestBlock : chestBlocks) {
+            chestBlock.setType(Material.AIR, false);
+        }
+
+        dolly.setType(Material.CHEST_MINECART);
+        Utils.send(player, "&aChest picked up.");
+    }
+
+    private void placeChest(ItemStack dolly, Block target, Player player) {
+        if (!beginOperation(player)) {
+            return;
+        }
+
+        try {
+            PlayerBackpack.getAsync(dolly).whenComplete((backpack, failure) ->
+                runDollyOperation(player, () -> {
+                    if (failure != null) {
+                        reportStorageFailure(player, failure);
+                    } else if (backpack == null) {
+                        Utils.send(player, "&cThis Dolly is not carrying a chest.");
+                    } else {
+                        placeChestSync(dolly, backpack, target, player);
                     }
-
-                    ((InventoryHolder) chestBlock.getState()).getInventory().setStorageContents(bpContents[0]);
-                    Slimefun.getDatabaseManager().getProfileDataController().saveBackpackInventory(backpack, IntStream.range(0, backpack.getSize()).boxed().toArray(Integer[]::new));
-                    dolly.setType(Material.MINECART);
-                    Utils.send(p, "&a已放置箱子");
-                }
-            });
-        }, false);
+                }));
+        } catch (RuntimeException ex) {
+            activeOperations.remove(player.getUniqueId());
+            reportStorageFailure(player, ex);
+        }
     }
 
-    private boolean canChestFit(Block singleChestBlock, Player p, boolean singleChest) {
-
-        boolean fits = singleChestBlock.getType() == Material.AIR;
-
-        if (!singleChest) {
-            fits = fits && getRightBlock(singleChestBlock, p.getFacing().getOppositeFace()).getType() == Material.AIR;
+    private void placeChestSync(ItemStack dolly, PlayerBackpack backpack, Block target, Player player) {
+        if (backpack.getSize() < DOUBLE_CHEST_SIZE) {
+            backpack.setSize(DOUBLE_CHEST_SIZE);
+            backpack.getInventory().setItem(SINGLE_CHEST_MARKER_SLOT, LOCK_ITEM);
         }
 
-        return fits;
+        ItemStack[] backpackContents = cloneContents(backpack.getInventory().getContents());
+        if (backpackContents.length == 0 || isLockItem(backpackContents[0])) {
+            Utils.send(player, "&cThis Dolly is not carrying a chest!");
+            return;
+        }
+
+        boolean singleChest = backpackContents.length <= SINGLE_CHEST_MARKER_SLOT
+            || isLockItem(backpackContents[SINGLE_CHEST_MARKER_SLOT]);
+        Material chestMaterial = getStoredChestMaterial(dolly);
+
+        if (!canChestFit(target, player, singleChest)) {
+            Utils.send(player, "&cThe chest cannot be placed here!");
+            return;
+        }
+
+        Block second = singleChest ? null : getRightBlock(target, player.getFacing().getOppositeFace());
+        try {
+            createChest(target, player, singleChest, chestMaterial);
+            applyStoredChestData(dolly, target, second);
+
+            ItemStack[] chestContents = singleChest
+                ? Arrays.copyOf(backpackContents, SINGLE_CHEST_SIZE)
+                : Arrays.copyOf(backpackContents, DOUBLE_CHEST_SIZE);
+            InventoryHolder holder = (InventoryHolder) target.getState();
+            holder.getInventory().setStorageContents(chestContents);
+
+            // The transfer is complete: wipe the backing backpack and persist every slot.
+            backpack.getInventory().clear();
+            backpack.getInventory().setItem(0, LOCK_ITEM);
+            saveBackpack(backpack);
+
+            clearStoredChestData(dolly);
+            dolly.setType(Material.MINECART);
+            Utils.send(player, "&aChest placed.");
+        } catch (RuntimeException ex) {
+            // Clear any partially placed inventory, restore the backing backpack, then remove blocks.
+            if (target.getState() instanceof InventoryHolder) {
+                ((InventoryHolder) target.getState()).getInventory().clear();
+            }
+            restoreBackpack(backpack, backpackContents);
+            target.setType(Material.AIR, false);
+            if (second != null) {
+                second.setType(Material.AIR, false);
+            }
+            FluffyMachines.getInstance().getLogger().warning(
+                "Could not place a Dolly chest for " + player.getName() + ": " + ex.getMessage());
+            Utils.send(player, "&cThe chest could not be placed; the Dolly kept its contents.");
+        }
     }
 
-    private void createChest(Block firstChest, Player p, boolean singleChest) {
-        BlockFace chestFace = p.getFacing().getOppositeFace();
-
-        // Place chest and rotate
-        firstChest.setType(Material.CHEST);
-        Directional firstDirectional = ((Directional) firstChest.getBlockData());
-        firstDirectional.setFacing(chestFace);
-        firstChest.setBlockData(firstDirectional);
+    private boolean canChestFit(Block first, Player player, boolean singleChest) {
+        if (!first.getType().isAir()
+            || StorageCacheUtils.hasSlimefunBlock(first.getLocation())
+            || !Slimefun.getProtectionManager().hasPermission(
+                player, first.getLocation(), Interaction.PLACE_BLOCK)) {
+            return false;
+        }
 
         if (!singleChest) {
-            // Get block on right (Previous cardinal)
-            Block secondChest = getRightBlock(firstChest, chestFace);
+            Block second = getRightBlock(first, player.getFacing().getOppositeFace());
+            return second.getType().isAir()
+                && !StorageCacheUtils.hasSlimefunBlock(second.getLocation())
+                && Slimefun.getProtectionManager().hasPermission(
+                    player, second.getLocation(), Interaction.PLACE_BLOCK);
+        }
+        return true;
+    }
 
-            // Place chest and rotate
-            secondChest.setType(Material.CHEST);
-            Directional secondDirectional = ((Directional) secondChest.getBlockData());
+    private void createChest(Block first, Player player, boolean singleChest, Material chestMaterial) {
+        BlockFace chestFace = player.getFacing().getOppositeFace();
+        Material material = chestMaterial == Material.TRAPPED_CHEST ? Material.TRAPPED_CHEST : Material.CHEST;
+
+        first.setType(material, false);
+        Directional firstDirectional = (Directional) first.getBlockData();
+        firstDirectional.setFacing(chestFace);
+        first.setBlockData(firstDirectional, false);
+
+        if (!singleChest) {
+            Block second = getRightBlock(first, chestFace);
+            second.setType(material, false);
+            Directional secondDirectional = (Directional) second.getBlockData();
             secondDirectional.setFacing(chestFace);
-            secondChest.setBlockData(secondDirectional);
+            second.setBlockData(secondDirectional, false);
 
-            // Connect chests
-            Chest firstChestType = ((Chest) firstChest.getBlockData());
-            Chest secondChestType = ((Chest) secondChest.getBlockData());
-
-            firstChestType.setType(Chest.Type.RIGHT); // Don't know why these are flipped
-            secondChestType.setType(Chest.Type.LEFT);
-
-            firstChest.setBlockData(firstChestType);
-            secondChest.setBlockData(secondChestType);
+            Chest firstData = (Chest) first.getBlockData();
+            Chest secondData = (Chest) second.getBlockData();
+            firstData.setType(Chest.Type.RIGHT);
+            secondData.setType(Chest.Type.LEFT);
+            first.setBlockData(firstData, false);
+            second.setBlockData(secondData, false);
         }
     }
 
     @Nonnull
-    private Block getRightBlock(Block b, BlockFace face) {
+    private Set<Block> getChestBlocks(Block block) {
+        Set<Block> blocks = new LinkedHashSet<>();
+        blocks.add(block);
 
+        if (!(block.getState() instanceof org.bukkit.block.Chest)) {
+            return blocks;
+        }
+
+        InventoryHolder holder = ((org.bukkit.block.Chest) block.getState()).getInventory().getHolder();
+        if (holder instanceof DoubleChest) {
+            DoubleChest doubleChest = (DoubleChest) holder;
+            addChestHolderBlock(blocks, doubleChest.getLeftSide());
+            addChestHolderBlock(blocks, doubleChest.getRightSide());
+        }
+        return blocks;
+    }
+
+    private void addChestHolderBlock(Set<Block> blocks, @Nullable InventoryHolder holder) {
+        if (holder instanceof org.bukkit.block.Chest) {
+            blocks.add(((org.bukkit.block.Chest) holder).getBlock());
+        }
+    }
+
+    @Nonnull
+    private Block getRightBlock(Block block, BlockFace face) {
         BlockFace rightFace;
-
         switch (face) {
             case NORTH:
                 rightFace = BlockFace.WEST;
@@ -283,17 +428,110 @@ public class Dolly extends SimpleSlimefunItem<ItemUseHandler> {
                 rightFace = BlockFace.SOUTH;
                 break;
             default:
-                throw new IllegalStateException("Unexpected value: " + face);
+                throw new IllegalStateException("Unexpected chest direction: " + face);
+        }
+        return block.getRelative(rightFace);
+    }
+
+    private ItemStack[] cloneContents(ItemStack[] contents) {
+        ItemStack[] clone = new ItemStack[contents.length];
+        for (int i = 0; i < contents.length; i++) {
+            clone[i] = contents[i] == null ? null : contents[i].clone();
+        }
+        return clone;
+    }
+
+    private void saveBackpack(PlayerBackpack backpack) {
+        Slimefun.getDatabaseManager().getProfileDataController().saveBackpackInventory(backpack);
+    }
+
+    private void setStoredChestData(ItemStack dolly, Material material, String lock, @Nullable String customName) {
+        ItemMeta meta = dolly.getItemMeta();
+        if (meta == null) {
+            throw new IllegalStateException("Dolly item metadata is missing");
         }
 
-        return b.getRelative(rightFace);
-
+        meta.getPersistentDataContainer().set(CHEST_TYPE_KEY, PersistentDataType.STRING, material.name());
+        setOrRemove(meta, CHEST_LOCK_KEY, lock);
+        setOrRemove(meta, CHEST_NAME_KEY, customName);
+        dolly.setItemMeta(meta);
     }
 
-    private boolean isLockItem(@Nullable ItemStack lockItem) {
-        return lockItem != null && (Utils.checkNonInteractable(lockItem)
-                || lockItem.getItemMeta().hasCustomModelData() // Remnants of when I didn't know what PDC was
-                && lockItem.getItemMeta().getCustomModelData() == 6969); // Leave in to maintain compatibility
+    private void setOrRemove(ItemMeta meta, NamespacedKey key, @Nullable String value) {
+        if (value == null || value.isEmpty()) {
+            meta.getPersistentDataContainer().remove(key);
+        } else {
+            meta.getPersistentDataContainer().set(key, PersistentDataType.STRING, value);
+        }
     }
 
+    private Material getStoredChestMaterial(ItemStack dolly) {
+        ItemMeta meta = dolly.getItemMeta();
+        if (meta == null) {
+            return Material.CHEST;
+        }
+
+        String value = meta.getPersistentDataContainer().get(CHEST_TYPE_KEY, PersistentDataType.STRING);
+        Material material = value == null ? null : Material.matchMaterial(value);
+        return material == Material.TRAPPED_CHEST ? Material.TRAPPED_CHEST : Material.CHEST;
+    }
+
+    private void applyStoredChestData(ItemStack dolly, Block first, @Nullable Block second) {
+        ItemMeta meta = dolly.getItemMeta();
+        if (meta == null) {
+            return;
+        }
+
+        String lock = meta.getPersistentDataContainer().get(CHEST_LOCK_KEY, PersistentDataType.STRING);
+        String customName = meta.getPersistentDataContainer().get(CHEST_NAME_KEY, PersistentDataType.STRING);
+        applyChestState(first, lock, customName);
+        if (second != null) {
+            applyChestState(second, lock, customName);
+        }
+    }
+
+    private void applyChestState(Block block, @Nullable String lock, @Nullable String customName) {
+        if (!(block.getState() instanceof org.bukkit.block.Chest)) {
+            return;
+        }
+
+        org.bukkit.block.Chest state = (org.bukkit.block.Chest) block.getState();
+        if (lock != null) {
+            state.setLock(lock);
+        }
+        if (customName != null) {
+            state.setCustomName(customName);
+        }
+        state.update(true, false);
+    }
+
+    private void clearStoredChestData(ItemStack dolly) {
+        ItemMeta meta = dolly.getItemMeta();
+        if (meta != null) {
+            meta.getPersistentDataContainer().remove(CHEST_TYPE_KEY);
+            meta.getPersistentDataContainer().remove(CHEST_LOCK_KEY);
+            meta.getPersistentDataContainer().remove(CHEST_NAME_KEY);
+            dolly.setItemMeta(meta);
+        }
+    }
+
+    private void restoreBackpack(PlayerBackpack backpack, ItemStack[] contents) {
+        backpack.getInventory().clear();
+        backpack.getInventory().setContents(cloneContents(contents));
+        try {
+            saveBackpack(backpack);
+        } catch (RuntimeException saveFailure) {
+            FluffyMachines.getInstance().getLogger().severe(
+                "Could not persist a Dolly rollback: " + saveFailure.getMessage());
+        }
+    }
+
+    private boolean isLockItem(@Nullable ItemStack item) {
+        if (item == null) {
+            return false;
+        }
+        ItemMeta meta = item.getItemMeta();
+        return Utils.checkNonInteractable(item)
+            || meta != null && meta.hasCustomModelData() && meta.getCustomModelData() == 6969;
+    }
 }

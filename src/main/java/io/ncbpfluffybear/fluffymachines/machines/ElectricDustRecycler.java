@@ -11,7 +11,7 @@ import me.mrCookieSlime.Slimefun.Objects.SlimefunItem.abstractItems.AContainer;
 import me.mrCookieSlime.Slimefun.Objects.SlimefunItem.abstractItems.MachineRecipe;
 import io.github.thebusybiscuit.slimefun4.api.items.SlimefunItemStack;
 import me.mrCookieSlime.Slimefun.api.inventory.BlockMenu;
-import io.github.thebusybiscuit.slimefun4.libraries.dough.items.CustomItemStack;
+import io.github.bakedlibs.dough.items.CustomItemStack;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.event.block.BlockBreakEvent;
@@ -92,7 +92,7 @@ public class ElectricDustRecycler extends AContainer implements RecipeDisplayIte
     @Nonnull
     @Override
     public String getInventoryTitle() {
-        return "&f矿粉回收机";
+        return "&fDust Recycler";
     }
 
     @Nonnull

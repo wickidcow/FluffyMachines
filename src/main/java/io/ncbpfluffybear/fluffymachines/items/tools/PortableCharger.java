@@ -4,7 +4,7 @@ package io.ncbpfluffybear.fluffymachines.items.tools;
 import io.github.thebusybiscuit.slimefun4.core.attributes.Rechargeable;
 import io.github.thebusybiscuit.slimefun4.core.handlers.ItemUseHandler;
 import io.github.thebusybiscuit.slimefun4.implementation.items.SimpleSlimefunItem;
-import io.github.thebusybiscuit.slimefun4.libraries.dough.common.ChatColors;
+import io.github.bakedlibs.dough.common.ChatColors;
 import io.ncbpfluffybear.fluffymachines.FluffyMachines;
 import io.ncbpfluffybear.fluffymachines.utils.Utils;
 import lombok.AccessLevel;
@@ -71,11 +71,11 @@ public class PortableCharger extends SimpleSlimefunItem<ItemUseHandler> implemen
             final Rechargeable charger = (Rechargeable) SlimefunItem.getByItem(chargerItem);
 
             // Create GUI Items
-            Inventory inventory = Bukkit.createInventory(null, INV_SIZE, ChatColor.GOLD + "便携充电器");
+            Inventory inventory = Bukkit.createInventory(null, INV_SIZE, ChatColor.GOLD + "Portable Charger");
 
             ItemStack backgroundItem = Utils.buildNonInteractable(Material.GRAY_STAINED_GLASS_PANE, null);
             ItemStack borderItem = Utils.buildNonInteractable(Material.YELLOW_STAINED_GLASS_PANE, null);
-            ItemStack powerItem = Utils.buildNonInteractable(Material.GLOWSTONE, "&4电力");
+            ItemStack powerItem = Utils.buildNonInteractable(Material.GLOWSTONE, "&4Power");
 
             // Build and open GUI
             for (int i = 0; i < INV_SIZE; i++)
@@ -85,7 +85,7 @@ public class PortableCharger extends SimpleSlimefunItem<ItemUseHandler> implemen
                 inventory.setItem(slot, borderItem);
 
             inventory.setItem(POWER_SLOT, powerItem);
-            updateSlot(inventory, POWER_SLOT, "&6&l剩余电量",
+            updateSlot(inventory, POWER_SLOT, "&6&lRemaining Power",
                 "&e" + charger.getItemCharge(chargerItem) + "J");
             inventory.clear(CHARGE_SLOT);
             p.openInventory(inventory);
@@ -99,17 +99,15 @@ public class PortableCharger extends SimpleSlimefunItem<ItemUseHandler> implemen
 
                     if (sfItem instanceof PortableCharger) {
                         p.closeInventory();
-                        Utils.send(p, "&c你不能为便携充电器充电");
-                    }
-
-                    if (sfItem instanceof Rechargeable) {
+                        Utils.send(p, "&cPortable Chargers cannot charge other Portable Chargers.");
+                    } else if (sfItem instanceof Rechargeable) {
                         Rechargeable device = (Rechargeable) sfItem;
                         float neededCharge = device.getMaxItemCharge(deviceItem)
                             - device.getItemCharge(deviceItem);
-                        // fix: 充电器物品不再有效时，停止充电
+                        // fix: Stop charging when the charger item is no longer valid
                         if (chargerItem == null || chargerItem.getType().isAir()) {
                             cancel();
-                            Utils.send(p, "&c你把便携充电器放哪儿了？");
+                            Utils.send(p, "&cThe Portable Charger is no longer available.");
                             return;
                         }
                         float availableCharge = charger.getItemCharge(chargerItem);
@@ -129,14 +127,14 @@ public class PortableCharger extends SimpleSlimefunItem<ItemUseHandler> implemen
                             }
 
                         } else if (neededCharge == 0) {
-                            Utils.send(p, "&c便携充电器电量已经满了!");
+                            Utils.send(p, "&cThe inserted item is fully charged!");
 
                         } else {
-                            Utils.send(p, "&c你的便携充电器没电了!");
+                            Utils.send(p, "&cYour Portable Charger is out of power!");
                         }
 
                         // The name of the powerItem NEEDS to be "Portable Charger" to cancel event
-                        updateSlot(inventory, POWER_SLOT, "&6&l剩余电量",
+                        updateSlot(inventory, POWER_SLOT, "&6&lRemaining Power",
                             "&e" + charger.getItemCharge(chargerItem) + "J");
                     }
 
@@ -148,7 +146,7 @@ public class PortableCharger extends SimpleSlimefunItem<ItemUseHandler> implemen
 
                         // Check if player left an item inside
                         if (forgottenItem != null) {
-                            Utils.send(p, "&c你忘记取出物品了，现在还给你");
+                            Utils.send(p, "&cYou left an item in the charger, so it was returned to you.");
                             Utils.giveOrDropItem(p, forgottenItem);
                         }
                     }
@@ -162,7 +160,7 @@ public class PortableCharger extends SimpleSlimefunItem<ItemUseHandler> implemen
         SlimefunItem sfItem1 = SlimefunItem.getByItem(e.getCurrentItem());
         SlimefunItem sfItem2 = SlimefunItem.getByItem(e.getCursor());
         if ((sfItem1 instanceof PortableCharger || sfItem2 instanceof PortableCharger)
-            && e.getWhoClicked().getOpenInventory().getTitle().contains("便携充电器")) {
+            && e.getWhoClicked().getOpenInventory().getTitle().contains("Portable Charger")) {
             e.setCancelled(true);
         }
     }

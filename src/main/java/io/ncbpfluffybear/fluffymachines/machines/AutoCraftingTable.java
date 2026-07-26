@@ -11,8 +11,8 @@ import io.github.thebusybiscuit.slimefun4.core.attributes.EnergyNetComponent;
 import io.github.thebusybiscuit.slimefun4.core.handlers.BlockBreakHandler;
 import io.github.thebusybiscuit.slimefun4.core.handlers.BlockPlaceHandler;
 import io.github.thebusybiscuit.slimefun4.core.networks.energy.EnergyNetComponentType;
-import io.github.thebusybiscuit.slimefun4.libraries.dough.collections.Pair;
-import io.github.thebusybiscuit.slimefun4.libraries.dough.items.CustomItemStack;
+import io.github.bakedlibs.dough.collections.Pair;
+import io.github.bakedlibs.dough.items.CustomItemStack;
 import io.github.thebusybiscuit.slimefun4.utils.ChestMenuUtils;
 import io.ncbpfluffybear.fluffymachines.FluffyMachines;
 import io.ncbpfluffybear.fluffymachines.utils.Utils;
@@ -60,7 +60,7 @@ public class AutoCraftingTable extends SlimefunItem implements EnergyNetComponen
     public AutoCraftingTable(ItemGroup category, SlimefunItemStack item, RecipeType recipeType, ItemStack[] recipe) {
         super(category, item, recipeType, recipe);
 
-        new BlockMenuPreset(getId(), "&6全自动工作台(原版)") {
+        new BlockMenuPreset(getId(), "&6Auto Crafting Table (Vanilla)") {
 
             @Override
             public void init() {
@@ -71,20 +71,20 @@ public class AutoCraftingTable extends SlimefunItem implements EnergyNetComponen
             public void newInstance(@Nonnull BlockMenu menu, @Nonnull Block b) {
                 SlimefunBlockData blockData = StorageCacheUtils.getBlock(b.getLocation());
                 if (blockData.getData("enabled") == null || String.valueOf(false).equals(blockData.getData("enabled"))) {
-                    menu.replaceExistingItem(4, new CustomItemStack(Material.GUNPOWDER, "&7启用: &4\u2718",
-                            "", "&e> 点击启用")
+                    menu.replaceExistingItem(4, new CustomItemStack(Material.GUNPOWDER, "&7Enabled: &4\u2718",
+                            "", "&e> Click to enable")
                     );
                     menu.replaceExistingItem(statusSlot,
                             new CustomItemStack(new ItemStack(Material.GRAY_STAINED_GLASS_PANE),
-                                    "&7&l禁用"));
+                                    "&7&lDisabled"));
                     menu.addMenuClickHandler(4, (p, slot, item, action) -> {
                         blockData.setData("enabled", String.valueOf(true));
                         newInstance(menu, b);
                         return false;
                     });
                 } else {
-                    menu.replaceExistingItem(4, new CustomItemStack(Material.REDSTONE, "&7启用: &2\u2714",
-                            "", "&e> 点击禁用"));
+                    menu.replaceExistingItem(4, new CustomItemStack(Material.REDSTONE, "&7Enabled: &2\u2714",
+                            "", "&e> Click to disable"));
                     menu.addMenuClickHandler(4, (p, slot, item, action) -> {
                         blockData.setData("enabled", String.valueOf(false));
                         newInstance(menu, b);
@@ -96,13 +96,14 @@ public class AutoCraftingTable extends SlimefunItem implements EnergyNetComponen
                 ItemStack keyItem = menu.getItemInSlot(KEY_SLOT);
 
                 if (keyItem == null) {
-                    menu.replaceExistingItem(KEY_SLOT, new CustomItemStack(Material.BARRIER, "&c无配方", "&c手持物品Shift+右键点击",
-                            "&c以设置需要合成的物品"
+                    menu.replaceExistingItem(KEY_SLOT, new CustomItemStack(Material.BARRIER, "&cNo recipe", "&cSneak-right-click while holding an item",
+                            "&cto set the item to craft"
                     ));
                 } else {
                     ItemMeta keyMeta = keyItem.getItemMeta();
-                    List<String> lore = keyMeta.getLore();
-                    if (lore == null || !ChatColor.stripColor(lore.get(0)).equals("手持物品Shift+右键点击")) { // Check if item has been replaced
+                    List<String> lore = keyMeta == null ? null : keyMeta.getLore();
+                    if (lore == null || lore.isEmpty()
+                        || !ChatColor.stripColor(lore.get(0)).equals("Sneak-right-click while holding an item")) { // Check if item has been replaced
                         menu.replaceExistingItem(KEY_SLOT, createKeyItem(keyItem.getType()));
                         if (menu.fits(keyItem, getOutputSlots())) {
                             menu.pushItem(keyItem, getOutputSlots());
@@ -198,7 +199,7 @@ public class AutoCraftingTable extends SlimefunItem implements EnergyNetComponen
                     (p, slot, item, action) -> false);
         }
 
-        preset.addItem(statusSlot, new CustomItemStack(new ItemStack(Material.YELLOW_STAINED_GLASS_PANE), "&e&l闲置"),
+        preset.addItem(statusSlot, new CustomItemStack(new ItemStack(Material.YELLOW_STAINED_GLASS_PANE), "&e&lIdle"),
                 (p, slot, item, action) -> false);
 
         for (int i : getOutputSlots()) {
@@ -219,9 +220,9 @@ public class AutoCraftingTable extends SlimefunItem implements EnergyNetComponen
             });
         }
 
-        preset.addItem(2, new CustomItemStack(new ItemStack(Material.CRAFTING_TABLE), "&e使用方法", "",
-                "&e在下方放入配方",
-                "&4仅支持原版工作台配方"
+        preset.addItem(2, new CustomItemStack(new ItemStack(Material.CRAFTING_TABLE), "&eHow to use", "",
+                "&ePlace the recipe in the slots below",
+                "&4Only vanilla crafting-table recipes are supported"
                 ),
                 (p, slot, item, action) -> false);
     }
@@ -275,7 +276,7 @@ public class AutoCraftingTable extends SlimefunItem implements EnergyNetComponen
             BlockMenu menu = StorageCacheUtils.getMenu(block.getLocation());
             if (menu.hasViewer()) {
                 menu.replaceExistingItem(statusSlot, new CustomItemStack(new ItemStack(Material.RED_STAINED_GLASS_PANE),
-                        "&c&l电量不足"));
+                        "&c&lNot enough power"));
             }
             return;
         }
@@ -291,7 +292,7 @@ public class AutoCraftingTable extends SlimefunItem implements EnergyNetComponen
         if (invItem == null || invItem.getType() == Material.BARRIER) {
             if (menu.hasViewer()) {
                 menu.replaceExistingItem(statusSlot, new CustomItemStack(new ItemStack(Material.RED_STAINED_GLASS_PANE),
-                        "&c&l未设置需要合成的物品"));
+                        "&c&lNo target item selected"));
             }
             return;
         }
@@ -307,7 +308,7 @@ public class AutoCraftingTable extends SlimefunItem implements EnergyNetComponen
             } else if (outSlot == getOutputSlots()[1]) {
                 if (menu.hasViewer()) {
                     menu.replaceExistingItem(statusSlot, new CustomItemStack(new ItemStack(Material.RED_STAINED_GLASS_PANE),
-                            "&c&l输出已满"));
+                            "&c&lOutput full"));
                 }
                 return;
             }
@@ -327,7 +328,7 @@ public class AutoCraftingTable extends SlimefunItem implements EnergyNetComponen
                     if (menu.hasViewer()) {
                         menu.replaceExistingItem(statusSlot,
                                 new CustomItemStack(new ItemStack(Material.RED_STAINED_GLASS_PANE),
-                                        "&c&l没有放入配方"));
+                                        "&c&lNo recipe inserted"));
                     }
                     return;
                 }
@@ -342,7 +343,7 @@ public class AutoCraftingTable extends SlimefunItem implements EnergyNetComponen
                 if (menu.hasViewer()) {
                     menu.replaceExistingItem(statusSlot,
                             new CustomItemStack(new ItemStack(Material.RED_STAINED_GLASS_PANE),
-                                    "&c&l你需要放入更多物品", "&c&l来进行合成"));
+                                    "&c&lMore input items are required", "&c&lto craft this item"));
                 }
                 return;
             }
@@ -366,7 +367,7 @@ public class AutoCraftingTable extends SlimefunItem implements EnergyNetComponen
                 if (existingItems.size() != rc.size()) {
                     if (menu.hasViewer()) {
                         menu.replaceExistingItem(statusSlot, new CustomItemStack(new ItemStack(Material.RED_STAINED_GLASS_PANE),
-                                "&c&l错误配方"));
+                                "&c&lIncorrect recipe"));
                     }
                     // The sizes don't match, but it can still be shapeless.
                     passOn = true;
@@ -379,7 +380,7 @@ public class AutoCraftingTable extends SlimefunItem implements EnergyNetComponen
                             if (menu.hasViewer()) {
                                 menu.replaceExistingItem(statusSlot,
                                         new CustomItemStack(new ItemStack(Material.RED_STAINED_GLASS_PANE),
-                                                "&c&l错误配方"));
+                                                "&c&lIncorrect recipe"));
                             }
                             // We need to pass on to shapeless in case the key is shapeless.
                             passOn = true;
@@ -406,7 +407,7 @@ public class AutoCraftingTable extends SlimefunItem implements EnergyNetComponen
                     if (menu.hasViewer()) {
                         menu.replaceExistingItem(statusSlot,
                             new CustomItemStack(new ItemStack(Material.RED_STAINED_GLASS_PANE),
-                                "&c&l错误配方"));
+                                "&c&lIncorrect recipe"));
                     }
                 }
 
@@ -425,7 +426,7 @@ public class AutoCraftingTable extends SlimefunItem implements EnergyNetComponen
                     if (menu.hasViewer()) {
                         menu.replaceExistingItem(statusSlot,
                                 new CustomItemStack(new ItemStack(Material.GREEN_STAINED_GLASS_PANE),
-                                        "&a&l合成中"));
+                                        "&a&lCrafting"));
                     }
                     craft(menu, recipe.getFirstValue().clone());
                     return;
@@ -434,14 +435,14 @@ public class AutoCraftingTable extends SlimefunItem implements EnergyNetComponen
                     if (menu.hasViewer()) {
                         menu.replaceExistingItem(statusSlot,
                             new CustomItemStack(new ItemStack(Material.RED_STAINED_GLASS_PANE),
-                                "&c&l错误配方"));
+                                "&c&lIncorrect recipe"));
                     }
                 }
             }
 
             if (menu.hasViewer()) {
                 menu.replaceExistingItem(statusSlot, new CustomItemStack(new ItemStack(Material.RED_STAINED_GLASS_PANE),
-                        "&c&l无效配方"));
+                        "&c&lInvalid recipe"));
             }
         }
     }
@@ -450,7 +451,7 @@ public class AutoCraftingTable extends SlimefunItem implements EnergyNetComponen
         if (!menu.fits(item, getOutputSlots())) {
             if (menu.hasViewer()) {
                 menu.replaceExistingItem(statusSlot, new CustomItemStack(new ItemStack(Material.RED_STAINED_GLASS_PANE),
-                        "&c&l输出已满"));
+                        "&c&lOutput full"));
             }
             return;
         }
@@ -458,7 +459,7 @@ public class AutoCraftingTable extends SlimefunItem implements EnergyNetComponen
         if (menu.hasViewer()) {
             menu.replaceExistingItem(statusSlot,
                     new CustomItemStack(new ItemStack(Material.GREEN_STAINED_GLASS_PANE),
-                            "&a&l制造中"));
+                            "&a&lProcessing"));
         }
 
         for (int slot : getInputSlots()) {
@@ -471,8 +472,8 @@ public class AutoCraftingTable extends SlimefunItem implements EnergyNetComponen
     }
 
     public static ItemStack createKeyItem(Material material) {
-        return new CustomItemStack(material, "", "&c手持物品Shift+右键点击",
-            "&c以设置需要合成的物品"
+        return new CustomItemStack(material, "", "&cSneak-right-click while holding an item",
+            "&cto set the item to craft"
         );
     }
 }

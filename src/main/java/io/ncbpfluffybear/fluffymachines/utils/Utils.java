@@ -4,8 +4,8 @@ import com.xzavier0722.mc.plugin.slimefun4.storage.util.StorageCacheUtils;
 import io.github.thebusybiscuit.slimefun4.core.handlers.BlockBreakHandler;
 import io.github.thebusybiscuit.slimefun4.implementation.Slimefun;
 import io.github.thebusybiscuit.slimefun4.implementation.handlers.SimpleBlockBreakHandler;
-import io.github.thebusybiscuit.slimefun4.libraries.dough.common.ChatColors;
-import io.github.thebusybiscuit.slimefun4.libraries.dough.protection.Interaction;
+import io.github.bakedlibs.dough.common.ChatColors;
+import io.github.bakedlibs.dough.protection.Interaction;
 import io.github.thebusybiscuit.slimefun4.utils.ChestMenuUtils;
 import io.ncbpfluffybear.fluffymachines.FluffyMachines;
 import me.mrCookieSlime.CSCoreLibPlugin.general.Inventory.ChestMenu;
@@ -70,7 +70,7 @@ public final class Utils {
     }
 
     public static String multiBlockWarning() {
-        return "&c这是个多方块结构!";
+        return "&cThis is a multiblock structure!";
     }
 
     // TODO: Deprecate custom model data method of detecting non interactables

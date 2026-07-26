@@ -12,7 +12,7 @@ import io.github.thebusybiscuit.slimefun4.core.handlers.BlockBreakHandler;
 import io.github.thebusybiscuit.slimefun4.core.networks.energy.EnergyNetComponentType;
 import io.github.thebusybiscuit.slimefun4.implementation.Slimefun;
 import io.github.thebusybiscuit.slimefun4.implementation.items.backpacks.SlimefunBackpack;
-import io.github.thebusybiscuit.slimefun4.libraries.dough.protection.Interaction;
+import io.github.bakedlibs.dough.protection.Interaction;
 import me.mrCookieSlime.Slimefun.Objects.handlers.BlockTicker;
 import me.mrCookieSlime.Slimefun.api.inventory.BlockMenu;
 import me.mrCookieSlime.Slimefun.api.inventory.BlockMenuPreset;
@@ -46,7 +46,7 @@ public class BackpackUnloader extends SlimefunItem implements EnergyNetComponent
 
         addItemHandler(onBreak());
 
-        new BlockMenuPreset(getId(), "&e背包卸载机") {
+        new BlockMenuPreset(getId(), "&eBackpack Unloader") {
 
             @Override
             public void init() {
@@ -127,31 +127,46 @@ public class BackpackUnloader extends SlimefunItem implements EnergyNetComponent
             if (sfItem instanceof SlimefunBackpack) {
 
                 // No ID
-                List<String> lore = inputItem.getItemMeta().getLore();
-                for (String s : lore) {
-                    if (s.equals(ChatColor.GRAY + "所有者: ")) {
-                        rejectInput(inv);
-                        return;
-                    }
-                }
-
-                PlayerBackpack.getAsync(inputItem, backpack -> {
-                    Inventory bpinv = backpack.getInventory();
-                    for (int slot = 0; slot < bpinv.getSize(); slot++) {
-                        if (bpinv.getItem(slot) != null) {
-                            ItemStack transferItem = bpinv.getItem(slot);
-                            bpinv.setItem(slot, null);
-                            Slimefun.getDatabaseManager().getProfileDataController().saveBackpackInventory(backpack, slot);
-                            inv.pushItem(transferItem, getOutputSlots());
-                            removeCharge(b.getLocation(), ENERGY_CONSUMPTION);
-                            return;
-                        }
-                        // Backpack is empty, move it to the output
-                        if (slot == bpinv.getSize() - 1) {
+                List<String> lore = inputItem.hasItemMeta() ? inputItem.getItemMeta().getLore() : null;
+                if (lore != null) {
+                    for (String line : lore) {
+                        if (line.equals(ChatColor.GRAY + "Owner: ")) {
                             rejectInput(inv);
                             return;
                         }
                     }
+                }
+
+                PlayerBackpack.getAsync(inputItem, backpack -> {
+                    if (backpack == null) {
+                        return;
+                    }
+
+                    // Gugu/Legacy backpack callbacks may be asynchronous. Keep all Bukkit
+                    // inventory and BlockMenu changes on the primary server thread.
+                    Utils.runSync(() -> {
+                        Inventory backpackInventory = backpack.getInventory();
+                        for (int slot = 0; slot < backpackInventory.getSize(); slot++) {
+                            ItemStack transferItem = backpackInventory.getItem(slot);
+                            if (transferItem != null) {
+                                if (!inv.fits(transferItem, getOutputSlots())) {
+                                    return;
+                                }
+
+                                // Insert a clone first. The backpack is only cleared after the
+                                // output is known to fit, preventing items from being voided.
+                                inv.pushItem(transferItem.clone(), getOutputSlots());
+                                backpackInventory.setItem(slot, null);
+                                Slimefun.getDatabaseManager().getProfileDataController()
+                                    .saveBackpackInventory(backpack);
+                                removeCharge(b.getLocation(), ENERGY_CONSUMPTION);
+                                return;
+                            }
+                        }
+
+                        // Backpack is empty, move it to the output.
+                        rejectInput(inv);
+                    });
                 }, false);
             } else {
                 // Not a backpack

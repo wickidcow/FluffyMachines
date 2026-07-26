@@ -66,8 +66,8 @@ public class Events implements Listener {
             e.setCancelled(true);
             Entity target = e.getRightClicked();
             if (target instanceof Player && WateringCan.updateUses(wateringCan, p, item, 3)) {
-                Utils.send(p, "&b喷水!");
-                Utils.send((Player) target, "&b你被水溅到了" + p.getDisplayName() + "!");
+                Utils.send(p, "&bSplash!");
+                Utils.send((Player) target, "&bYou were splashed by " + p.getDisplayName() + "!");
                 ((Player) target).addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 60, 1));
             }
         }
@@ -165,7 +165,7 @@ public class Events implements Listener {
                             }, 1);
                         }, false);
                     } else {
-                        Utils.send(p, "&c缺少传送装置!");
+                        Utils.send(p, "&cMissing Warp Pad!");
                     }
                 }, false);
             }
@@ -195,7 +195,7 @@ public class Events implements Listener {
                                     || destination.getBlock().getRelative(BlockFace.UP).getType() == Material.AIR
                                     || destination.getBlock().getRelative(BlockFace.UP, 2).getType() == Material.AIR
                             ) {
-                                Utils.send(p, "&c缺少传送装置!");
+                                Utils.send(p, "&cMissing Warp Pad!");
                                 return;
                             }
 
@@ -210,7 +210,7 @@ public class Events implements Listener {
 
                         @Override
                         public void onResultNotFound() {
-                            Utils.send(p, "&c缺少传送装置!");
+                            Utils.send(p, "&cMissing Warp Pad!");
                         }
                     }
             );
@@ -234,7 +234,7 @@ public class Events implements Listener {
     public void onExtractionNodePlace(BlockPlaceEvent e) {
         if ((e.getBlock().getY() != e.getBlockAgainst().getY() || e.getBlockAgainst().getType() != Material.ENDER_CHEST)
             && isExtractionNode(e.getItemInHand())) {
-            Utils.send(e.getPlayer(), "&c你只能把这个放在末影箱旁边!");
+            Utils.send(e.getPlayer(), "&cThis node can only be placed next to an Ender Chest!");
             e.setCancelled(true);
         }
     }

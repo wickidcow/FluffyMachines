@@ -52,7 +52,7 @@ public class ExpDispenser extends MultiBlockMachine {
         }
 
         if (experience == 0) {
-            Utils.send(p, "&c没有收集到经验!");
+            Utils.send(p, "&cNo experience was collected!");
         } else {
             p.giveExp(experience);
             Utils.send(p, "&a+" + experience + " XP");

@@ -66,6 +66,8 @@ For a core JAR that is not published to a Maven repository, install it locally f
 
 Auto Crafting Table, Auto Enhanced Crafting Table, Auto Armor Forge, Auto Magic Workbench, Auto Ancient Altar, Auto Table Saw, Water Sprinkler, Backpack Loader/Unloader, Advanced Auto Disenchanter, Electric Dust Fabricator/Recycler, Advanced Charging Bench, and Smart Factory.
 
+Auto Crafter inputs support a complete one-shot recipe with one item per occupied slot. For cargo automation, keep one template item in each occupied stackable slot and feed additional ingredients.
+
 ### Storage, cargo, and travel
 
 Mini Fluffy Barrel, six Fluffy Barrel tiers, Ender Chest Insertion/Extraction Nodes, Cargo Manipulator, Dolly, Warp Pads, and Alternate Elevator Plates.

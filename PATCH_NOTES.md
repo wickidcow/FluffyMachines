@@ -90,3 +90,12 @@ The source now uses those exact signatures and handles both `onResult` and `onRe
 - Replaced dependency `bindItem` behavior with a local Dolly binder that writes backpack UUID/owner PDC and English display lore.
 - Migrates the legacy final non-ID owner lore line when an existing Dolly is loaded.
 - Added CI checks preventing translated dependency owner lore from returning.
+
+## 26.2.8 Auto Crafter single-recipe repair
+
+- Fixed Auto Armor Forge recipes made from stackable ingredients, including Glowstone Armor, failing when exactly one ingredient was placed in each occupied recipe slot.
+- Added a safe one-shot crafting path that consumes a complete single recipe.
+- Preserved the existing cargo/template workflow: buffered recipes still stop with one template item in each occupied stackable slot.
+- Prevented partially refilled templates from being consumed when some ingredient slots contain one item and others contain multiple items.
+- Re-arms one-shot crafting when the input grid is cleared or the machine is explicitly enabled.
+- Added null and malformed-recipe guards around the shared Auto Crafter matcher.

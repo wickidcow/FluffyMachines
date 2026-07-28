@@ -147,6 +147,24 @@ jobs:
 
           echo "Optional mcMMO integration check passed."
 
+      - name: Verify Auto Crafter single-recipe repair
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          AUTO_CRAFTER="src/main/java/io/ncbpfluffybear/fluffymachines/objects/AutoCrafter.java"
+
+          if grep -Fq 'item.getAmount() == 1 && item.getType().getMaxStackSize() != 1' "$AUTO_CRAFTER"; then
+            echo "The legacy one-item rejection has returned."
+            exit 1
+          fi
+
+          grep -Fq 'SINGLE_CRAFT_READY' "$AUTO_CRAFTER"
+          grep -Fq 'RecipeMatch.SINGLE' "$AUTO_CRAFTER"
+          grep -Fq 'hasSingleStackableIngredient && hasBufferedStackableIngredient' "$AUTO_CRAFTER"
+
+          echo "Auto Crafter single-recipe repair check passed."
+
       - name: Build and verify
         run: mvn -B clean verify --file pom.xml
 
